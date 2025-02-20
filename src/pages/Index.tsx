@@ -3,7 +3,6 @@ import { motion } from "framer-motion";
 import { useState } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
 import {
   Smile,
   Frown,
@@ -11,12 +10,12 @@ import {
   Focus,
   Moon,
   Rocket,
-  Music4,
-  LanguagesIcon,
 } from "lucide-react";
 import { MoodSelector } from "@/components/MoodSelector";
 import { PlaylistViewer } from "@/components/PlaylistViewer";
 import { LanguageSelector } from "@/components/LanguageSelector";
+import { IntroAnimation } from "@/components/IntroAnimation";
+import { WelcomeMessage } from "@/components/WelcomeMessage";
 
 const moods = [
   { id: "happy", name: "Happy", icon: Smile, color: "bg-yellow-500" },
@@ -28,6 +27,7 @@ const moods = [
 ];
 
 const Index = () => {
+  const [showIntro, setShowIntro] = useState(true);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"hindi" | "english" | "mixed">("english");
   const { toast } = useToast();
@@ -40,24 +40,23 @@ const Index = () => {
     });
   };
 
+  if (showIntro) {
+    return <IntroAnimation onComplete={() => setShowIntro(false)} />;
+  }
+
   return (
     <div className="min-h-screen p-6 flex flex-col items-center justify-center">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
         className="w-full max-w-6xl mx-auto space-y-8"
       >
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl md:text-5xl font-bold tracking-tight">
-            How are you feeling today?
-          </h1>
-          <p className="text-lg text-muted-foreground">
-            Select your mood and let the music match your emotions
-          </p>
-        </div>
-
         {!selectedMood ? (
-          <MoodSelector moods={moods} onSelect={handleMoodSelect} />
+          <>
+            <WelcomeMessage />
+            <MoodSelector moods={moods} onSelect={handleMoodSelect} />
+          </>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
