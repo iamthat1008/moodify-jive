@@ -57,13 +57,24 @@ const Index = () => {
   const [showIntro, setShowIntro] = useState(true);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"hindi" | "english" | "mixed">("english");
+  const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const { toast } = useToast();
 
   const handleMoodSelect = (moodId: string) => {
     setSelectedMood(moodId);
+    setShowLanguageSelector(true);
     toast({
       title: "Mood Selected",
-      description: `Playing ${moodId} music for you`,
+      description: `You're feeling ${moodId}! Now, choose your preferred language.`,
+    });
+  };
+
+  const handleLanguageSelect = (language: "hindi" | "english" | "mixed") => {
+    setSelectedLanguage(language);
+    setShowLanguageSelector(false);
+    toast({
+      title: "Language Selected",
+      description: `Playing ${selectedMood} music in ${language}`,
     });
   };
 
@@ -84,6 +95,43 @@ const Index = () => {
             <WelcomeMessage />
             <MoodSelector moods={moods} onSelect={handleMoodSelect} />
           </>
+        ) : showLanguageSelector ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="space-y-6"
+          >
+            <Button
+              variant="ghost"
+              onClick={() => {
+                setSelectedMood(null);
+                setShowLanguageSelector(false);
+              }}
+              className="hover:scale-105 transition-transform"
+            >
+              ← Back to moods
+            </Button>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.2 }}
+              className="text-center space-y-4"
+            >
+              <h2 className="text-3xl font-bold">In which language would you like to listen?</h2>
+              <p className="text-muted-foreground">Choose your preferred language for music</p>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="flex justify-center"
+            >
+              <LanguageSelector
+                value={selectedLanguage}
+                onChange={handleLanguageSelect}
+              />
+            </motion.div>
+          </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -93,7 +141,10 @@ const Index = () => {
             <div className="flex justify-between items-center">
               <Button
                 variant="ghost"
-                onClick={() => setSelectedMood(null)}
+                onClick={() => {
+                  setSelectedMood(null);
+                  setShowLanguageSelector(false);
+                }}
                 className="hover:scale-105 transition-transform"
               >
                 ← Back to moods
