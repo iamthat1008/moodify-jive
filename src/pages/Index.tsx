@@ -10,6 +10,7 @@ import {
   Focus,
   Moon,
   Rocket,
+  Heart,
 } from "lucide-react";
 import { MoodSelector } from "@/components/MoodSelector";
 import { PlaylistViewer } from "@/components/PlaylistViewer";
@@ -25,6 +26,32 @@ const moods = [
   { id: "chill", name: "Chill", icon: Moon, color: "bg-purple-500" },
   { id: "motivational", name: "Motivational", icon: Rocket, color: "bg-amber-500" },
 ];
+
+const Footer = () => {
+  return (
+    <motion.div 
+      className="fixed bottom-4 right-4 flex items-center gap-2 text-sm text-muted-foreground"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ delay: 1 }}
+    >
+      <span>Created by Shub</span>
+      <motion.div
+        animate={{
+          scale: [1, 1.2, 1],
+        }}
+        transition={{
+          duration: 1.2,
+          repeat: Infinity,
+          ease: "easeInOut",
+        }}
+        className="text-primary"
+      >
+        <Heart size={12} fill="currentColor" />
+      </motion.div>
+    </motion.div>
+  );
+};
 
 const Index = () => {
   const [showIntro, setShowIntro] = useState(true);
@@ -45,7 +72,7 @@ const Index = () => {
   }
 
   return (
-    <div className="min-h-screen p-6 flex flex-col items-center justify-center">
+    <div className="min-h-screen p-6 flex flex-col items-center justify-center relative">
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -80,6 +107,7 @@ const Index = () => {
           </motion.div>
         )}
       </motion.div>
+      <Footer />
     </div>
   );
 };
