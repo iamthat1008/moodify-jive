@@ -27,6 +27,33 @@ const moods = [
   { id: "motivational", name: "Motivational", icon: Rocket, color: "bg-amber-500" },
 ];
 
+const Logo = () => {
+  const letters = "Moodify".split("");
+  
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.5 }}
+      className="flex items-center justify-center mb-8"
+    >
+      <div className="flex items-center space-x-0.5">
+        {letters.map((letter, index) => (
+          <motion.span
+            key={index}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: index * 0.05 }}
+            className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent"
+          >
+            {letter}
+          </motion.span>
+        ))}
+      </div>
+    </motion.div>
+  );
+};
+
 const Footer = () => {
   return (
     <motion.div 
@@ -90,6 +117,7 @@ const Index = () => {
         transition={{ duration: 0.5 }}
         className="w-full max-w-6xl mx-auto space-y-8"
       >
+        <Logo />
         {!selectedMood ? (
           <>
             <WelcomeMessage />
