@@ -1,6 +1,5 @@
-
 import { motion } from "framer-motion";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useToast } from "@/components/ui/use-toast";
 import { Button } from "@/components/ui/button";
 import {
@@ -16,7 +15,8 @@ import { MoodSelector } from "@/components/MoodSelector";
 import { PlaylistViewer } from "@/components/PlaylistViewer";
 import { LanguageSelector } from "@/components/LanguageSelector";
 import { IntroAnimation } from "@/components/IntroAnimation";
-import { WelcomeMessage } from "@/components/WelcomeMessage";
+import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
+import { PersonalizedWelcome } from "@/components/PersonalizedWelcome";
 
 const moods = [
   { id: "happy", name: "Happy", icon: Smile, color: "bg-gradient-to-br from-yellow-400 to-amber-500" },
@@ -85,12 +85,38 @@ const Footer = () => {
   );
 };
 
+interface UserData {
+  name: string;
+  age: number | "";
+  country: string;
+}
+
 const Index = () => {
   const [showIntro, setShowIntro] = useState(true);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [userData, setUserData] = useState<UserData | null>(null);
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"hindi" | "english" | "mixed">("english");
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const savedUserData = localStorage.getItem("userData");
+    if (savedUserData) {
+      setUserData(JSON.parse(savedUserData));
+    }
+  }, []);
+
+  const handleOnboardingComplete = (data: UserData) => {
+    setUserData(data);
+    localStorage.setItem("userData", JSON.stringify(data));
+    setShowOnboarding(false);
+    toast({
+      title: "Welcome aboard!",
+      description: `Great to have you here, ${data.name}!`,
+      className: "glass-dark",
+    });
+  };
 
   const handleMoodSelect = (moodId: string) => {
     setSelectedMood(moodId);
@@ -113,7 +139,22 @@ const Index = () => {
   };
 
   if (showIntro) {
-    return <IntroAnimation onComplete={() => setShowIntro(false)} />;
+    return <IntroAnimation onComplete={() => {
+      setShowIntro(false);
+      if (!userData) {
+        setShowOnboarding(true);
+      }
+    }} />;
+  }
+
+  if (showOnboarding) {
+    return (
+      <div className="min-h-screen p-6 flex flex-col items-center justify-center relative bg-gradient-to-br from-background via-background to-muted/20">
+        <Logo />
+        <OnboardingFlow onComplete={handleOnboardingComplete} />
+        <Footer />
+      </div>
+    );
   }
 
   return (
@@ -127,7 +168,7 @@ const Index = () => {
         <Logo />
         {!selectedMood ? (
           <>
-            <WelcomeMessage />
+            {userData && <PersonalizedWelcome name={userData.name} />}
             <MoodSelector moods={moods} onSelect={handleMoodSelect} />
           </>
         ) : showLanguageSelector ? (
