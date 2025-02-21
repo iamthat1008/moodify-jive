@@ -1,3 +1,4 @@
+
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap');
 
 @tailwind base;
@@ -71,6 +72,10 @@
 
   .hover-scale {
     @apply transition-transform duration-200 hover:scale-105;
+  }
+  
+  .text-gradient {
+    @apply bg-gradient-to-br from-foreground via-foreground/80 to-foreground/60 bg-clip-text text-transparent;
   }
 }
 
