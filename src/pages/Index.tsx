@@ -17,6 +17,7 @@ import { LanguageSelector } from "@/components/LanguageSelector";
 import { IntroAnimation } from "@/components/IntroAnimation";
 import { OnboardingFlow } from "@/components/onboarding/OnboardingFlow";
 import { PersonalizedWelcome } from "@/components/PersonalizedWelcome";
+import { ChatBubble } from "@/components/ChatBubble";
 
 const moods = [
   { id: "happy", name: "Happy", icon: Smile, color: "bg-gradient-to-br from-yellow-400 to-amber-500" },
@@ -237,6 +238,7 @@ const Index = () => {
         )}
       </motion.div>
       <Footer />
+      <ChatBubble />
     </div>
   );
 };
