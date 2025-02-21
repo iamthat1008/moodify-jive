@@ -137,7 +137,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
               />
               <Button
                 onClick={handleNext}
-                className="w-full p-6 text-lg bg-gradient-to-r from-purple-500 via-purple-600 to-purple-700 hover:from-purple-600 hover:via-purple-700 hover:to-purple-800 text-white shadow-lg shadow-purple-500/20 hover:shadow-purple-500/40 transition-all duration-300 hover:-translate-y-0.5 backdrop-blur-sm glass border-none"
+                className="w-full p-6 text-lg bg-gradient-to-r from-green-400 via-green-500 to-green-600 hover:from-green-500 hover:via-green-600 hover:to-green-700 text-white shadow-lg shadow-green-500/20 hover:shadow-green-500/40 transition-all duration-300 hover:-translate-y-0.5 hover:scale-[1.02] backdrop-blur-sm glass border-none"
               >
                 {step === steps.length - 1 ? "Complete" : "Continue"}
               </Button>
@@ -149,10 +149,10 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
                 key={i}
                 className={`h-2 rounded-full transition-all duration-300 ${
                   i === step
-                    ? "w-8 bg-purple-500"
+                    ? "w-8 bg-green-500"
                     : i < step
-                    ? "w-8 bg-purple-400/40"
-                    : "w-2 bg-purple-300/20"
+                    ? "w-8 bg-green-400/40"
+                    : "w-2 bg-green-300/20"
                 }`}
               />
             ))}
@@ -169,9 +169,9 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
             initial={{ scale: 0 }}
             animate={{ scale: 1 }}
             transition={{ type: "spring", stiffness: 200, damping: 20 }}
-            className="w-20 h-20 rounded-full bg-purple-500/20 flex items-center justify-center"
+            className="w-20 h-20 rounded-full bg-green-500/20 flex items-center justify-center"
           >
-            <Check className="w-10 h-10 text-purple-500" />
+            <Check className="w-10 h-10 text-green-500" />
           </motion.div>
           <motion.h2
             initial={{ opacity: 0, y: 20 }}
@@ -194,3 +194,4 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
     </AnimatePresence>
   );
 };
+
