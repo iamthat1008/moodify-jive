@@ -17,6 +17,15 @@ interface OnboardingFlowProps {
   onComplete: (data: OnboardingData) => void;
 }
 
+type StepConfig = {
+  title: string;
+  description: string;
+  field: keyof OnboardingData;
+  type: "text" | "number";
+  placeholder: string;
+  validation: (value: any) => boolean;
+}
+
 export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
   const [step, setStep] = useState(0);
   const [data, setData] = useState<OnboardingData>({
@@ -27,7 +36,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const { toast } = useToast();
 
-  const steps = [
+  const steps: StepConfig[] = [
     {
       title: "What's your name?",
       description: "Let's make this personal!",
@@ -42,7 +51,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
       field: "age",
       type: "number",
       placeholder: "Enter your age",
-      validation: (value: number) => value >= 13 && value <= 120,
+      validation: (value: number | "") => typeof value === "number" ? value >= 13 && value <= 120 : false,
     },
     {
       title: "Where are you from?",
@@ -57,7 +66,7 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
   const currentStep = steps[step];
 
   const handleNext = () => {
-    const currentValue = data[currentStep.field as keyof OnboardingData];
+    const currentValue = data[currentStep.field];
     if (!currentStep.validation(currentValue)) {
       toast({
         title: "Invalid Input",
@@ -113,16 +122,15 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
               <Input
                 type={currentStep.type}
                 placeholder={currentStep.placeholder}
-                value={data[currentStep.field as keyof OnboardingData]}
+                value={data[currentStep.field]}
                 onChange={(e) =>
                   setData({
                     ...data,
-                    [currentStep.field]:
-                      currentStep.type === "number"
-                        ? e.target.value === ""
-                          ? ""
-                          : Number(e.target.value)
-                        : e.target.value,
+                    [currentStep.field]: currentStep.type === "number"
+                      ? e.target.value === ""
+                        ? ""
+                        : Number(e.target.value)
+                      : e.target.value,
                   })
                 }
                 className="text-lg p-6 text-center glass"
@@ -186,3 +194,4 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
     </AnimatePresence>
   );
 };
+
