@@ -1,5 +1,5 @@
 
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useEffect, useState } from "react";
 
 interface PersonalizedWelcomeProps {
@@ -17,6 +17,7 @@ const moodMessages = [
 export const PersonalizedWelcome = ({ name }: PersonalizedWelcomeProps) => {
   const [greeting, setGreeting] = useState("");
   const [message, setMessage] = useState("");
+  const [isChanging, setIsChanging] = useState(false);
 
   useEffect(() => {
     const hour = new Date().getHours();
@@ -27,8 +28,27 @@ export const PersonalizedWelcome = ({ name }: PersonalizedWelcomeProps) => {
     else timeGreeting = "Good evening";
     
     setGreeting(timeGreeting);
+    
+    // Initial message
     setMessage(moodMessages[Math.floor(Math.random() * moodMessages.length)]);
+
+    // Set up message rotation
+    const interval = setInterval(() => {
+      setIsChanging(true);
+      setTimeout(() => {
+        setMessage(moodMessages[Math.floor(Math.random() * moodMessages.length)]);
+        setIsChanging(false);
+      }, 500); // Half of the transition duration
+    }, 5000); // Change message every 5 seconds
+
+    return () => clearInterval(interval);
   }, []);
+
+  const messageVariants = {
+    initial: { opacity: 0, y: 20 },
+    animate: { opacity: 1, y: 0 },
+    exit: { opacity: 0, y: -20 }
+  };
 
   return (
     <motion.div
@@ -45,14 +65,21 @@ export const PersonalizedWelcome = ({ name }: PersonalizedWelcomeProps) => {
       >
         {greeting}, {name}!
       </motion.h2>
-      <motion.h1
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, delay: 0.6 }}
-        className="text-4xl md:text-5xl font-bold tracking-tight text-gradient"
-      >
-        {message}?
-      </motion.h1>
+      <AnimatePresence mode="wait">
+        <motion.h1
+          key={message}
+          variants={messageVariants}
+          initial="initial"
+          animate="animate"
+          exit="exit"
+          transition={{ duration: 0.5, ease: "easeInOut" }}
+          className={`text-4xl md:text-5xl font-bold tracking-tight text-gradient ${
+            isChanging ? 'opacity-0' : 'opacity-100'
+          } transition-opacity duration-500`}
+        >
+          {message}?
+        </motion.h1>
+      </AnimatePresence>
       <motion.p
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
