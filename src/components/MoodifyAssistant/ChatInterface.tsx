@@ -124,3 +124,4 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     </AnimatePresence>
   );
 };
+

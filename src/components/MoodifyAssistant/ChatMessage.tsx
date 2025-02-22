@@ -32,3 +32,4 @@ export const ChatMessage = ({ message }: ChatMessageProps) => {
     </motion.div>
   );
 };
+

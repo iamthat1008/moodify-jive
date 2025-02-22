@@ -57,3 +57,4 @@ Previous context from chat: ${JSON.stringify(context.slice(-3))}`;
 
   return { sendMessage, isLoading };
 };
+
