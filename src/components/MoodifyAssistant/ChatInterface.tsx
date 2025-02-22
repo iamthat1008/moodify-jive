@@ -18,11 +18,22 @@ export interface Message {
   content: string;
 }
 
+const suggestedQuestions = [
+  "How do I choose a playlist?",
+  "What moods are available?",
+  "Can I switch languages?",
+  "Who created Moodify?",
+];
+
 export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "👋 Hey! I'm your Moodify Assistant. How are you feeling today?",
+      content: "👋 Hey! I'm your Moodify Assistant. How are you feeling today? Here are some things you can ask me:",
+    },
+    {
+      role: "assistant",
+      content: suggestedQuestions.map(q => `• ${q}`).join("\n"),
     },
   ]);
   const [input, setInput] = useState("");
@@ -71,7 +82,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, y: 20, scale: 0.95 }}
           transition={{ duration: 0.2 }}
-          className="fixed bottom-28 right-4 w-full max-w-[400px] rounded-lg shadow-xl bg-card border z-50 overflow-hidden"
+          className="fixed bottom-28 right-4 w-full max-w-[400px] rounded-lg shadow-xl bg-card border z-50 overflow-hidden md:right-8"
         >
           {/* Header */}
           <div className="flex items-center justify-between p-4 border-b bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -93,6 +104,28 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
             ))}
             <div ref={messagesEndRef} />
           </div>
+
+          {/* Suggested Questions */}
+          {messages.length <= 2 && (
+            <div className="px-4 pb-2 space-y-2">
+              <div className="flex flex-wrap gap-2">
+                {suggestedQuestions.map((question, index) => (
+                  <Button
+                    key={index}
+                    variant="secondary"
+                    size="sm"
+                    className="text-xs"
+                    onClick={() => {
+                      setInput(question);
+                      handleSendMessage();
+                    }}
+                  >
+                    {question}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {/* Input */}
           <div className="p-4 border-t bg-background/80 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -124,4 +157,3 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
     </AnimatePresence>
   );
 };
-

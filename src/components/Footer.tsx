@@ -1,6 +1,6 @@
 
 import { motion } from "framer-motion";
-import { Heart } from "lucide-react";
+import { Heart, Instagram } from "lucide-react";
 
 export const Footer = () => {
   return (
@@ -10,7 +10,18 @@ export const Footer = () => {
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1, type: "spring", stiffness: 200, damping: 20 }}
     >
-      <span>Created by Shub</span>
+      <span>Created by</span>
+      <motion.a
+        href="https://www.instagram.com/shubham_pathak799/"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="flex items-center gap-1.5 text-primary hover:underline"
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+      >
+        <span>Shub</span>
+        <Instagram size={12} className="inline-block" />
+      </motion.a>
       <motion.div
         animate={{
           scale: [1, 1.2, 1],
