@@ -29,11 +29,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       role: "assistant",
-      content: "👋 Hey! I'm your Moodify Assistant. How are you feeling today? Here are some things you can ask me:",
-    },
-    {
-      role: "assistant",
-      content: suggestedQuestions.map(q => `• ${q}`).join("\n"),
+      content: "👋 Hey! I'm your Moodify Assistant. How are you feeling today?",
     },
   ]);
   const [input, setInput] = useState("");
@@ -106,7 +102,7 @@ export const ChatInterface = ({ isOpen, onClose }: ChatInterfaceProps) => {
           </div>
 
           {/* Suggested Questions */}
-          {messages.length <= 2 && (
+          {messages.length <= 1 && (
             <div className="px-4 pb-2 space-y-2">
               <div className="flex flex-wrap gap-2">
                 {suggestedQuestions.map((question, index) => (
