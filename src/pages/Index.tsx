@@ -63,7 +63,7 @@ const Logo = () => {
 const Footer = () => {
   return (
     <motion.div 
-      className="fixed bottom-4 right-4 flex items-center gap-2 text-sm text-muted-foreground backdrop-blur-sm px-4 py-2 rounded-full bg-background/50 border border-border/50"
+      className="fixed bottom-4 left-4 flex items-center gap-2 text-sm text-muted-foreground backdrop-blur-sm px-4 py-2 rounded-full bg-background/50 border border-border/50"
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: 1, type: "spring", stiffness: 200, damping: 20 }}
