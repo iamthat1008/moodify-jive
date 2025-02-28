@@ -1,8 +1,9 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Song } from "@/types/music";
 import { AudioControls } from "./AudioControls";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ListMusic } from "lucide-react";
+import { ChevronDown, ListMusic, Play, Pause } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
