@@ -190,7 +190,7 @@ export const MediaPlayer = ({
                 <img 
                   src={currentSong.albumArt} 
                   alt={currentSong.title} 
-                  className="h-10 w-10 rounded object-cover"
+                  className="h-10 w-10 rounded object-cover mr-3" 
                 />
                 <div className="flex-1 min-w-0">
                   <p className="font-medium truncate">{currentSong.title}</p>

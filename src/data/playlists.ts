@@ -1,4 +1,3 @@
-
 import { MoodPlaylistMap } from "@/types/music";
 
 // Sample playlists organized by mood and language
@@ -104,8 +103,8 @@ export const playlists: MoodPlaylistMap = {
           id: "sad-hindi-1",
           title: "Channa Mereya",
           artist: "Arijit Singh",
-          albumArt: "https://drive.google.com/uc?export=view&id=1xk_UQF7JCVJ-P1S9JY11hUnVRQXPTxj8",
-          audioUrl: "https://drive.google.com/uc?export=view&id=1SZjn-ZcMlL0qA75hKbNHxL4Ca5r7rp43",
+          albumArt: "https://drive.google.com/uc?export=view&id=1Qe6qgDZCPAME7n0lheAgRY8bHmPH6h2p",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1S0uJwmDwdkXFYwF8Jow_BKUPwGN-W__l",
           duration: 268
         },
         {
@@ -128,17 +127,41 @@ export const playlists: MoodPlaylistMap = {
           id: "sad-english-1",
           title: "Someone Like You",
           artist: "Adele",
-          albumArt: "https://drive.google.com/uc?export=view&id=1jDUm-b-CV_JVrTTy2t13RfR89r1JQyfw",
-          audioUrl: "https://drive.google.com/uc?export=view&id=1dKTvcxiZFIKsU3NU20l25ZAsQKSVrFkl",
+          albumArt: "https://drive.google.com/uc?export=view&id=1Qy8nPqRS6ZEYsXfriPwBnQDuuFspV7AT",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1eC3Pbhb6iUQvyXE_63UR2rSRhObCNxul",
           duration: 285
         },
         {
           id: "sad-english-2",
           title: "Fix You",
           artist: "Coldplay",
-          albumArt: "https://drive.google.com/uc?export=view&id=1RzcaZMggJ7KPqvVCJgUBLyWl5aR9HXKJ",
-          audioUrl: "https://drive.google.com/uc?export=view&id=1YD9V33QbFrMQDNR_nlbIUUZzCz1zlU2L",
+          albumArt: "https://drive.google.com/uc?export=view&id=1oNXF5KXUz_x0yHbvk09gUrKOmv0MR0a1",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1jvXRdfnJeEKsRRw5c8XNbOhtKoyrKBuI",
           duration: 294
+        },
+        {
+          id: "sad-english-3",
+          title: "Hello",
+          artist: "Adele",
+          albumArt: "https://drive.google.com/uc?export=view&id=1HGNfpKOZdeSdHEcTxmRm5eaX0JDzdJOD",
+          audioUrl: "https://drive.google.com/uc?export=view&id=14EXYyFW8BEdjQ_xvjxlJbLV7EZThnpGb",
+          duration: 321
+        },
+        {
+          id: "sad-english-4",
+          title: "All I Want",
+          artist: "Kodaline",
+          albumArt: "https://drive.google.com/uc?export=view&id=1Uo2BxUEzK0ccGGjmZjEVK3ziuQNt_DQD",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1k7f9nmyBkR0nzKcw9IA53yXEr_yBvyAY",
+          duration: 303
+        },
+        {
+          id: "sad-english-5",
+          title: "Skinny Love",
+          artist: "Birdy",
+          albumArt: "https://drive.google.com/uc?export=view&id=1jOPd-z7O2a-nN1dVNRHOYtgtRSCaXxvs",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1W6aaA4FLl5VmdMeX5HqsnXLRLZTJFPOe",
+          duration: 212
         }
       ]
     },
@@ -163,6 +186,14 @@ export const playlists: MoodPlaylistMap = {
           albumArt: "https://drive.google.com/uc?export=view&id=1E8mLFj8hzEVJXjpVC-Fy8xODEqc-4C5D",
           audioUrl: "https://drive.google.com/uc?export=view&id=19kT-XWEqFVbF5Q_S_j6QCfFR1IdRRnF7",
           duration: 269
+        },
+        {
+          id: "sad-mixed-3",
+          title: "Tose Naina",
+          artist: "Arijit Singh",
+          albumArt: "https://drive.google.com/uc?export=view&id=1-4cVA6oZ8DTT4H-XJ4Eoh5D0t05vkzAT",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1xQvro_zdLQfSlBrsiBZUPtkLZHLQHRSy",
+          duration: 289
         }
       ]
     }
