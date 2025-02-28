@@ -1,3 +1,4 @@
+
 import { MoodPlaylistMap } from "@/types/music";
 
 // Sample playlists organized by mood and language
@@ -114,6 +115,14 @@ export const playlists: MoodPlaylistMap = {
           albumArt: "https://drive.google.com/uc?export=view&id=1aPUfn6MNZMhGt1wSEPrGFi7Kj8rqlZkv",
           audioUrl: "https://drive.google.com/uc?export=view&id=1wI13QRvvQUOMuTdNf-rC8aw6XVTapxfv",
           duration: 252
+        },
+        {
+          id: "sad-hindi-3",
+          title: "Bewafa",
+          artist: "Imran Khan",
+          albumArt: "https://drive.google.com/uc?export=view&id=1Qe6qgDZCPAME7n0lheAgRY8bHmPH6h2p",
+          audioUrl: "https://drive.google.com/uc?export=view&id=1DEmun6MVsTiVvVNcQcORwe6VwKl8WVIT",
+          duration: 240
         }
       ]
     },
