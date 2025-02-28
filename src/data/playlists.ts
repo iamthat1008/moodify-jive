@@ -1,4 +1,3 @@
-
 import { MoodPlaylistMap } from "@/types/music";
 
 // Sample playlists organized by mood and language
@@ -105,8 +104,9 @@ export const playlists: MoodPlaylistMap = {
           title: "Channa Mereya",
           artist: "Arijit Singh",
           albumArt: "https://drive.google.com/uc?export=view&id=1Qe6qgDZCPAME7n0lheAgRY8bHmPH6h2p",
-          audioUrl: "https://drive.google.com/uc?export=view&id=1S0uJwmDwdkXFYwF8Jow_BKUPwGN-W__l",
-          duration: 268
+          audioUrl: "https://drive.google.com/file/d/1C78GtRYGIfN-kTIk7yJhfTp5aaFs_olF/preview",
+          duration: 268,
+          isEmbed: true
         },
         {
           id: "sad-hindi-2",

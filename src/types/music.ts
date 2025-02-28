@@ -6,6 +6,7 @@ export interface Song {
   albumArt: string;
   audioUrl: string;
   duration: number; // in seconds
+  isEmbed?: boolean; // Optional flag to indicate if the song uses an embed player
 }
 
 export interface Playlist {

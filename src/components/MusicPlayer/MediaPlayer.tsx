@@ -1,4 +1,3 @@
-
 import { useState, useRef, useEffect } from "react";
 import { Song } from "@/types/music";
 import { AudioControls } from "./AudioControls";
@@ -34,12 +33,15 @@ export const MediaPlayer = ({
   const [isRepeatOn, setIsRepeatOn] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const iframeRef = useRef<HTMLIFrameElement | null>(null);
   const { toast } = useToast();
 
   const currentSong = songs[currentSongIndex];
+  
+  const isEmbedSong = currentSong?.isEmbed || currentSong?.audioUrl?.includes('/preview');
 
   useEffect(() => {
-    if (audioRef.current) {
+    if (!isEmbedSong && audioRef.current) {
       const audio = audioRef.current;
       
       const setAudioData = () => {
@@ -59,15 +61,12 @@ export const MediaPlayer = ({
         }
       };
 
-      // Add event listeners
       audio.addEventListener('loadeddata', setAudioData);
       audio.addEventListener('timeupdate', setAudioTime);
       audio.addEventListener('ended', handleEnded);
       
-      // Set volume
       audio.volume = volume;
       
-      // Start playing when song changes
       if (isPlaying) {
         audio.play().catch(error => {
           console.error("Error playing audio:", error);
@@ -80,16 +79,24 @@ export const MediaPlayer = ({
         });
       }
       
-      // Clean up
       return () => {
         audio.removeEventListener('loadeddata', setAudioData);
         audio.removeEventListener('timeupdate', setAudioTime);
         audio.removeEventListener('ended', handleEnded);
       };
     }
-  }, [currentSongIndex, isPlaying, volume, isRepeatOn, toast]);
+  }, [currentSongIndex, isPlaying, volume, isRepeatOn, toast, isEmbedSong]);
 
   const handlePlayPause = () => {
+    if (isEmbedSong) {
+      setIsPlaying(!isPlaying);
+      toast({
+        title: isPlaying ? "Paused" : "Playing",
+        description: "Embedded players may need manual control in the iframe",
+      });
+      return;
+    }
+    
     if (audioRef.current) {
       if (isPlaying) {
         audioRef.current.pause();
@@ -108,13 +115,9 @@ export const MediaPlayer = ({
   };
 
   const handlePrev = () => {
-    if (currentTime > 3) {
-      // If more than 3 seconds into song, restart current song
-      if (audioRef.current) {
-        audioRef.current.currentTime = 0;
-      }
+    if (!isEmbedSong && audioRef.current && currentTime > 3) {
+      audioRef.current.currentTime = 0;
     } else {
-      // Otherwise go to previous song
       const newIndex = currentSongIndex === 0 ? songs.length - 1 : currentSongIndex - 1;
       setCurrentSongIndex(newIndex);
     }
@@ -122,31 +125,34 @@ export const MediaPlayer = ({
 
   const handleNext = () => {
     if (isShuffleOn) {
-      // Play a random song
       let newIndex;
       do {
         newIndex = Math.floor(Math.random() * songs.length);
       } while (newIndex === currentSongIndex && songs.length > 1);
       setCurrentSongIndex(newIndex);
     } else {
-      // Play next song in order
       const newIndex = (currentSongIndex + 1) % songs.length;
       setCurrentSongIndex(newIndex);
     }
   };
 
   const handleSeek = (time: number) => {
-    if (audioRef.current) {
+    if (!isEmbedSong && audioRef.current) {
       audioRef.current.currentTime = time;
       setCurrentTime(time);
+    } else {
+      toast({
+        title: "Seek Not Available",
+        description: "Seeking is not available for embedded content",
+      });
     }
   };
 
   const handleVolumeChange = (newVolume: number) => {
-    if (audioRef.current) {
+    if (!isEmbedSong && audioRef.current) {
       audioRef.current.volume = newVolume;
-      setVolume(newVolume);
     }
+    setVolume(newVolume);
   };
 
   const toggleShuffle = () => {
@@ -171,11 +177,13 @@ export const MediaPlayer = ({
 
   return (
     <>
-      <audio 
-        ref={audioRef} 
-        src={currentSong.audioUrl}
-        preload="metadata" 
-      />
+      {!isEmbedSong && (
+        <audio 
+          ref={audioRef} 
+          src={currentSong.audioUrl}
+          preload="metadata" 
+        />
+      )}
 
       <AnimatePresence>
         {isMinimized ? (
@@ -271,6 +279,30 @@ export const MediaPlayer = ({
                   alt={currentSong.title} 
                   className="w-full h-full object-cover"
                 />
+                {isEmbedSong && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <iframe
+                      ref={iframeRef}
+                      src={currentSong.audioUrl}
+                      width="100%"
+                      height="100%"
+                      allow="autoplay"
+                      className="absolute opacity-0"
+                      style={{ pointerEvents: isPlaying ? 'auto' : 'none' }}
+                    />
+                    {!isPlaying && (
+                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
+                        <Button
+                          onClick={handlePlayPause}
+                          size="icon"
+                          className="h-16 w-16 rounded-full"
+                        >
+                          <Play size={32} />
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </motion.div>
               
               <div className="text-center w-full max-w-xs">
@@ -294,6 +326,7 @@ export const MediaPlayer = ({
                 onToggleRepeat={toggleRepeat}
                 isShuffleOn={isShuffleOn}
                 isRepeatOn={isRepeatOn}
+                disableSeek={isEmbedSong}
               />
             </div>
           </motion.div>
