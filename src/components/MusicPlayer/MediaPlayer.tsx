@@ -1,3 +1,4 @@
+
 import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,6 @@ import {
   SkipForward,
   SkipBack,
   Repeat,
-  RepeatOne,
   Shuffle,
   ListMusic
 } from "lucide-react";
@@ -261,11 +261,8 @@ export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShow
                         variant="outline"
                         size="sm"
                       >
-                        {isRepeatOne ? (
-                          <RepeatOne className="h-4 w-4" />
-                        ) : (
-                          <Repeat className="h-4 w-4" />
-                        )}
+                        <Repeat className="h-4 w-4" />
+                        {isRepeatOne && <span className="text-xs font-bold absolute">1</span>}
                       </Toggle>
                     </div>
                   </div>
@@ -305,7 +302,7 @@ export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShow
         </Card>
       </div>
       <audio
-        src={currentSong?.url}
+        src={currentSong?.audioUrl}
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onEnded={handleEnded}
