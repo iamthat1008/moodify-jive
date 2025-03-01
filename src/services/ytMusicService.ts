@@ -1,5 +1,3 @@
-import { YTMusic } from "@codyduong/ytmusicapi";
-
 // Mock YTMusic class implementation
 class YTMusic {
   constructor() {

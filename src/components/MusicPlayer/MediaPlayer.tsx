@@ -241,7 +241,7 @@ export const MediaPlayer = ({
                 aria-label="Toggle shuffle"
                 pressed={isShuffleEnabled}
                 onPressedChange={setIsShuffleEnabled}
-                variant="ghost"
+                variant="default"
                 size="sm"
               >
                 <Shuffle className="h-4 w-4" />
@@ -282,7 +282,7 @@ export const MediaPlayer = ({
                 aria-label="Toggle repeat"
                 pressed={isRepeatEnabled || isRepeatOne}
                 onPressedChange={handleRepeatClick}
-                variant="ghost"
+                variant="default"
                 size="sm"
               >
                 {isRepeatOne ? (
