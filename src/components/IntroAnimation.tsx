@@ -12,8 +12,8 @@ export const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
-      setTimeout(onComplete, 1000); // Give time for exit animation
-    }, 3000);
+      setTimeout(onComplete, 600); // Shorter time for exit animation
+    }, 2500); // Shorter display time
     
     return () => clearTimeout(timer);
   }, [onComplete]);
@@ -27,6 +27,7 @@ export const IntroAnimation = ({ onComplete }: IntroAnimationProps) => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
+          transition={{ duration: 0.5 }}
           className="fixed inset-0 flex items-center justify-center bg-background z-50"
         >
           <div className="flex items-center space-x-1">

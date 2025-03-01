@@ -12,7 +12,7 @@ import {
   Shuffle,
   ListMusic
 } from "lucide-react";
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { motion } from "framer-motion";
 import { Song } from "@/types/music";
 
@@ -44,7 +44,10 @@ export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShow
   useEffect(() => {
     if (audioRef.current) {
       if (isPlaying) {
-        audioRef.current.play();
+        audioRef.current.play().catch(err => {
+          console.error("Error playing audio:", err);
+          setIsPlaying(false);
+        });
       } else {
         audioRef.current.pause();
       }
@@ -135,7 +138,12 @@ export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShow
     if (isRepeatEnabled) {
       handleNext();
     } else if (isRepeatOne) {
-      audioRef.current?.play();
+      if (audioRef.current) {
+        audioRef.current.currentTime = 0;
+        audioRef.current.play().catch(err => {
+          console.error("Error replaying audio:", err);
+        });
+      }
     } else {
       if (currentSongIndex === songs.length - 1) {
         setIsPlaying(false);
@@ -238,17 +246,17 @@ export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShow
                     </div>
 
                     <div className="flex items-center justify-center gap-2">
-                      <Button variant="ghost" size="icon" onClick={handlePrevious}>
+                      <Button variant="outline" size="icon" onClick={handlePrevious}>
                         <SkipBack className="h-6 w-6" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={handlePlayPause}>
+                      <Button variant="outline" size="icon" onClick={handlePlayPause}>
                         {isPlaying ? (
                           <Pause className="h-8 w-8" />
                         ) : (
                           <Play className="h-8 w-8" />
                         )}
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={handleNext}>
+                      <Button variant="outline" size="icon" onClick={handleNext}>
                         <SkipForward className="h-6 w-6" />
                       </Button>
                     </div>
