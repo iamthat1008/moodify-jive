@@ -1,405 +1,351 @@
 
-import { useState, useRef, useEffect } from "react";
-import { Song } from "@/types/music";
-import { AudioControls } from "./AudioControls";
-import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ListMusic, Play, Pause, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
-import { useToast } from "@/components/ui/use-toast";
+import { Slider } from "@/components/ui/slider";
+import { Toggle } from "@/components/ui/toggle";
+import { 
+  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
+  ListMusic, X, Repeat, Repeat1, Shuffle 
+} from "lucide-react";
+import { AudioControls } from "./AudioControls";
+import { createYouTubePlayer, formatDuration } from "@/services/youtubePlayerService";
+
+interface Song {
+  id: string;
+  title: string;
+  artist: string;
+  albumArt: string;
+  audioUrl: string;
+  duration: number;
+  isEmbed?: boolean;
+  videoId?: string;
+}
 
 interface MediaPlayerProps {
   songs: Song[];
-  initialSongIndex?: number;
+  initialSongIndex: number;
   playlistTitle: string;
-  onClose?: () => void;
-  onShowQueue?: () => void;
+  onShowQueue: () => void;
+  onClose: () => void;
 }
 
 export const MediaPlayer = ({
   songs,
-  initialSongIndex = 0,
+  initialSongIndex,
   playlistTitle,
+  onShowQueue,
   onClose,
-  onShowQueue
 }: MediaPlayerProps) => {
   const [currentSongIndex, setCurrentSongIndex] = useState(initialSongIndex);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [volume, setVolume] = useState(80);
+  const [isMuted, setIsMuted] = useState(false);
+  const [progress, setProgress] = useState(0);
   const [duration, setDuration] = useState(0);
-  const [volume, setVolume] = useState(0.7);
-  const [isShuffleOn, setIsShuffleOn] = useState(false);
-  const [isRepeatOn, setIsRepeatOn] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
-  const iframeRef = useRef<HTMLIFrameElement | null>(null);
-  const ytPlayerRef = useRef<any>(null);
-  const { toast } = useToast();
-
+  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
+  const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isRepeatOne, setIsRepeatOne] = useState(false);
+  
+  const youtubePlayerRef = useRef<YT.Player | null>(null);
+  const playerContainerRef = useRef<HTMLDivElement>(null);
+  const progressInterval = useRef<number | null>(null);
+  
   const currentSong = songs[currentSongIndex];
-  
-  // All YouTube Music content is treated as embedded
-  const isEmbedSong = true;
+  const isYouTube = !!currentSong?.videoId;
 
-  // Initialize YouTube player
+  // Create/update YouTube player when song changes
   useEffect(() => {
-    // Load YouTube IFrame API
-    if (!window.YT && !document.getElementById('youtube-api')) {
-      const tag = document.createElement('script');
-      tag.id = 'youtube-api';
-      tag.src = 'https://www.youtube.com/iframe_api';
-      const firstScriptTag = document.getElementsByTagName('script')[0];
-      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    if (isYouTube && currentSong.videoId) {
+      // Clear any existing interval
+      if (progressInterval.current) {
+        window.clearInterval(progressInterval.current);
+        progressInterval.current = null;
+      }
+
+      // Initialize YouTube player
+      const initPlayer = async () => {
+        if (playerContainerRef.current) {
+          // Remove any existing player
+          while (playerContainerRef.current.firstChild) {
+            playerContainerRef.current.removeChild(playerContainerRef.current.firstChild);
+          }
+
+          // Create a new div for the player
+          const playerElement = document.createElement('div');
+          playerElement.id = 'youtube-player';
+          playerContainerRef.current.appendChild(playerElement);
+
+          // Create YouTube player
+          const player = await createYouTubePlayer(
+            'youtube-player',
+            currentSong.videoId || '',
+            (event) => {
+              // onReady
+              youtubePlayerRef.current = event.target;
+              setDuration(event.target.getDuration());
+              if (isPlaying) event.target.playVideo();
+              
+              // Start progress tracking
+              progressInterval.current = window.setInterval(() => {
+                if (youtubePlayerRef.current) {
+                  const currentTime = youtubePlayerRef.current.getCurrentTime();
+                  const videoDuration = youtubePlayerRef.current.getDuration();
+                  setProgress(currentTime);
+                  setDuration(videoDuration);
+                }
+              }, 1000);
+            },
+            (event) => {
+              // onStateChange
+              if (event.data === window.YT?.PlayerState.ENDED) {
+                handleSongEnd();
+              } else if (event.data === window.YT?.PlayerState.PLAYING) {
+                setIsPlaying(true);
+              } else if (event.data === window.YT?.PlayerState.PAUSED) {
+                setIsPlaying(false);
+              }
+            }
+          );
+        }
+      };
+
+      initPlayer();
     }
 
-    // When YouTube IFrame API is ready
-    const onYouTubeIframeAPIReady = () => {
-      if (!currentSong?.videoId) return;
-      
-      if (ytPlayerRef.current) {
-        ytPlayerRef.current.destroy();
-      }
-      
-      // Extract video ID from URL if it's a full URL
-      let videoId = currentSong.videoId;
-      if (!videoId && currentSong.audioUrl) {
-        const match = currentSong.audioUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
-        if (match) {
-          videoId = match[1];
-        }
-      }
-      
-      if (!videoId) {
-        console.error("No video ID found for song:", currentSong);
-        return;
-      }
-      
-      // Create YouTube player
-      ytPlayerRef.current = new window.YT.Player('youtube-player', {
-        videoId: videoId,
-        playerVars: {
-          autoplay: isPlaying ? 1 : 0,
-          controls: 0,
-          disablekb: 1,
-          enablejsapi: 1,
-          iv_load_policy: 3,
-          modestbranding: 1,
-          rel: 0,
-          showinfo: 0
-        },
-        events: {
-          onReady: onPlayerReady,
-          onStateChange: onPlayerStateChange,
-          onError: onPlayerError
-        }
-      });
-    };
-
-    // Handle player ready event
-    const onPlayerReady = (event: any) => {
-      event.target.setVolume(volume * 100);
-      if (isPlaying) {
-        event.target.playVideo();
-      }
-      setDuration(event.target.getDuration());
-    };
-
-    // Handle player state changes
-    const onPlayerStateChange = (event: any) => {
-      if (event.data === window.YT.PlayerState.ENDED) {
-        if (isRepeatOn) {
-          event.target.seekTo(0);
-          event.target.playVideo();
-        } else {
-          handleNext();
-        }
-      }
-      
-      if (event.data === window.YT.PlayerState.PLAYING) {
-        setIsPlaying(true);
-        // Start time updater
-        startTimeUpdater();
-      } else if (event.data === window.YT.PlayerState.PAUSED) {
-        setIsPlaying(false);
-        // Stop time updater
-        stopTimeUpdater();
-      }
-    };
-
-    // Handle player errors
-    const onPlayerError = (event: any) => {
-      console.error("YouTube Player Error:", event.data);
-      toast({
-        title: "Playback Error",
-        description: "There was an error playing this track. Please try another song.",
-        variant: "destructive"
-      });
-    };
-
-    // Set up YouTube API ready callback
-    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
-
-    // If YouTube API is already loaded, initialize player directly
-    if (window.YT && window.YT.Player) {
-      onYouTubeIframeAPIReady();
-    }
-
+    // Cleanup
     return () => {
-      // Clean up YouTube player
-      if (ytPlayerRef.current) {
-        ytPlayerRef.current.destroy();
+      if (progressInterval.current) {
+        window.clearInterval(progressInterval.current);
+        progressInterval.current = null;
       }
-      
-      // Clean up time updater
-      stopTimeUpdater();
     };
-  }, [currentSong, isPlaying, volume, isRepeatOn, toast]);
+  }, [currentSong, isYouTube]);
 
-  // Time updater for YouTube player
-  const timeUpdaterRef = useRef<number | null>(null);
-  
-  const startTimeUpdater = () => {
-    stopTimeUpdater();
-    timeUpdaterRef.current = window.setInterval(() => {
-      if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
-        setCurrentTime(ytPlayerRef.current.getCurrentTime());
+  // Handle volume change
+  useEffect(() => {
+    if (youtubePlayerRef.current) {
+      if (isMuted) {
+        youtubePlayerRef.current.mute();
+      } else {
+        youtubePlayerRef.current.unMute();
+        youtubePlayerRef.current.setVolume(volume);
       }
-    }, 1000);
-  };
-  
-  const stopTimeUpdater = () => {
-    if (timeUpdaterRef.current) {
-      window.clearInterval(timeUpdaterRef.current);
-      timeUpdaterRef.current = null;
+    }
+  }, [volume, isMuted]);
+
+  // Handle song end
+  const handleSongEnd = () => {
+    if (isRepeatOne) {
+      // Replay the same song
+      if (youtubePlayerRef.current) {
+        youtubePlayerRef.current.seekTo(0, true);
+        youtubePlayerRef.current.playVideo();
+      }
+    } else if (isShuffleEnabled) {
+      // Play random song
+      const randomIndex = Math.floor(Math.random() * songs.length);
+      setCurrentSongIndex(randomIndex);
+    } else if (currentSongIndex < songs.length - 1) {
+      // Play next song
+      setCurrentSongIndex(prev => prev + 1);
+    } else if (isRepeatEnabled) {
+      // Start playlist over
+      setCurrentSongIndex(0);
+    } else {
+      // Stop playback
+      setIsPlaying(false);
     }
   };
 
   const handlePlayPause = () => {
-    if (ytPlayerRef.current) {
+    if (youtubePlayerRef.current) {
       if (isPlaying) {
-        ytPlayerRef.current.pauseVideo();
+        youtubePlayerRef.current.pauseVideo();
       } else {
-        ytPlayerRef.current.playVideo();
+        youtubePlayerRef.current.playVideo();
       }
+      setIsPlaying(!isPlaying);
     }
-    // setIsPlaying is handled by onPlayerStateChange
   };
 
-  const handlePrev = () => {
-    if (ytPlayerRef.current && currentTime > 3) {
-      ytPlayerRef.current.seekTo(0);
-    } else {
-      const newIndex = currentSongIndex === 0 ? songs.length - 1 : currentSongIndex - 1;
-      setCurrentSongIndex(newIndex);
+  const handlePrevious = () => {
+    if (currentSongIndex > 0) {
+      setCurrentSongIndex(prev => prev - 1);
     }
   };
 
   const handleNext = () => {
-    if (isShuffleOn) {
-      let newIndex;
-      do {
-        newIndex = Math.floor(Math.random() * songs.length);
-      } while (newIndex === currentSongIndex && songs.length > 1);
-      setCurrentSongIndex(newIndex);
+    if (currentSongIndex < songs.length - 1) {
+      setCurrentSongIndex(prev => prev + 1);
+    } else if (isRepeatEnabled) {
+      setCurrentSongIndex(0);
+    }
+  };
+
+  const handleProgressChange = (value: number[]) => {
+    const newPosition = value[0];
+    setProgress(newPosition);
+    
+    if (youtubePlayerRef.current) {
+      youtubePlayerRef.current.seekTo(newPosition, true);
+    }
+  };
+
+  const handleRepeatClick = () => {
+    if (!isRepeatEnabled && !isRepeatOne) {
+      setIsRepeatEnabled(true);
+      setIsRepeatOne(false);
+    } else if (isRepeatEnabled && !isRepeatOne) {
+      setIsRepeatEnabled(false);
+      setIsRepeatOne(true);
     } else {
-      const newIndex = (currentSongIndex + 1) % songs.length;
-      setCurrentSongIndex(newIndex);
+      setIsRepeatEnabled(false);
+      setIsRepeatOne(false);
     }
   };
-
-  const handleSeek = (time: number) => {
-    if (ytPlayerRef.current) {
-      ytPlayerRef.current.seekTo(time);
-      setCurrentTime(time);
-    } else {
-      toast({
-        title: "Seek Not Available",
-        description: "Seeking is not available for this content",
-      });
-    }
-  };
-
-  const handleVolumeChange = (newVolume: number) => {
-    if (ytPlayerRef.current) {
-      ytPlayerRef.current.setVolume(newVolume * 100);
-    }
-    setVolume(newVolume);
-  };
-
-  const toggleShuffle = () => {
-    setIsShuffleOn(!isShuffleOn);
-    toast({
-      title: !isShuffleOn ? "Shuffle On" : "Shuffle Off",
-      description: !isShuffleOn ? "Songs will play in random order" : "Songs will play in sequential order",
-    });
-  };
-
-  const toggleRepeat = () => {
-    setIsRepeatOn(!isRepeatOn);
-    toast({
-      title: !isRepeatOn ? "Repeat On" : "Repeat Off",
-      description: !isRepeatOn ? "Current song will repeat" : "Playback will continue to next song",
-    });
-  };
-
-  if (!currentSong) {
-    return <div>No songs available</div>;
-  }
 
   return (
-    <>
-      <AnimatePresence>
-        {isMinimized ? (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className="fixed bottom-4 left-4 right-4 z-50"
-          >
-            <Card className="p-3 flex items-center justify-between backdrop-blur-lg bg-background/80 border shadow-lg">
-              <div className="flex items-center space-x-3 flex-1 min-w-0">
-                <img 
-                  src={currentSong.albumArt} 
-                  alt={currentSong.title} 
-                  className="h-10 w-10 rounded object-cover mr-3" 
-                />
-                <div className="flex-1 min-w-0">
-                  <p className="font-medium truncate">{currentSong.title}</p>
-                  <p className="text-xs text-muted-foreground truncate">{currentSong.artist}</p>
-                </div>
-              </div>
-              
-              <div className="flex items-center space-x-1">
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={handlePlayPause}
-                  className="h-8 w-8"
-                >
-                  {isPlaying ? (
-                    <Pause size={18} />
-                  ) : (
-                    <Play size={18} />
-                  )}
-                </Button>
-                
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setIsMinimized(false)}
-                  className="h-8 w-8"
-                >
-                  <ChevronDown size={18} />
-                </Button>
-              </div>
-            </Card>
-          </motion.div>
-        ) : (
-          <motion.div
-            initial={{ y: 20, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ y: 20, opacity: 0 }}
-            className={cn(
-              "fixed inset-0 z-50 flex flex-col",
-              "backdrop-blur-lg bg-background/95"
-            )}
-          >
-            <div className="flex justify-between items-center p-4 border-b">
-              <div className="flex items-center space-x-2">
-                <Badge variant="outline" className="font-normal">
-                  {playlistTitle}
-                </Badge>
-                <Badge variant="secondary">YouTube Music</Badge>
-              </div>
-              <div className="flex space-x-1">
-                {onShowQueue && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onShowQueue}
-                    className="h-8 w-8"
-                  >
-                    <ListMusic size={18} />
-                  </Button>
-                )}
-                <Button 
-                  variant="ghost" 
-                  size="icon" 
-                  onClick={() => setIsMinimized(true)}
-                  className="h-8 w-8"
-                >
-                  <ChevronDown size={18} />
-                </Button>
-                {onClose && (
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={onClose}
-                    className="h-8 w-8"
-                  >
-                    <X size={18} />
-                  </Button>
-                )}
-              </div>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: 20 }}
+      className="fixed bottom-0 left-0 right-0 z-50 p-4"
+    >
+      <Card className="w-full max-w-4xl mx-auto bg-card/80 backdrop-blur border shadow-xl">
+        <div className="flex flex-col md:flex-row p-4 gap-4">
+          {/* Album Art and Player Container */}
+          <div className="flex md:w-1/3">
+            <div className="w-16 h-16 md:w-24 md:h-24 rounded overflow-hidden flex-shrink-0 mr-4">
+              <img src={currentSong.albumArt} alt={currentSong.title} className="w-full h-full object-cover" />
             </div>
-            
-            <div className="flex-1 flex flex-col items-center justify-center p-6 space-y-6 overflow-hidden">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ duration: 0.3 }}
-                className="relative aspect-square w-full max-w-[300px] mx-auto shadow-xl rounded-md overflow-hidden"
+            <div className="flex flex-col justify-center flex-grow min-w-0">
+              <h3 className="font-medium text-sm md:text-base truncate">{currentSong.title}</h3>
+              <p className="text-xs md:text-sm text-muted-foreground truncate">{currentSong.artist}</p>
+              <p className="text-xs text-muted-foreground mt-1">{playlistTitle}</p>
+            </div>
+          </div>
+
+          {/* YouTube Player (hidden) */}
+          <div 
+            ref={playerContainerRef} 
+            className="absolute left-0 top-0 opacity-0 pointer-events-none" 
+            style={{ width: '1px', height: '1px', overflow: 'hidden' }}
+          />
+
+          {/* Controls */}
+          <div className="flex-1 flex flex-col justify-center gap-2">
+            <div className="flex items-center justify-center gap-2 md:gap-4">
+              <Toggle
+                aria-label="Toggle shuffle"
+                pressed={isShuffleEnabled}
+                onPressedChange={setIsShuffleEnabled}
+                variant="ghost"
+                size="sm"
               >
-                <img 
-                  src={currentSong.albumArt} 
-                  alt={currentSong.title} 
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0">
-                  <div id="youtube-player" className="absolute top-0 left-0 w-full h-full opacity-0"></div>
-                  {!isPlaying && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
-                      <Button
-                        onClick={handlePlayPause}
-                        size="icon"
-                        className="h-16 w-16 rounded-full"
-                      >
-                        <Play size={32} />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              </motion.div>
+                <Shuffle className="h-4 w-4" />
+              </Toggle>
+
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handlePrevious} 
+                disabled={currentSongIndex === 0}
+              >
+                <SkipBack className="h-5 w-5" />
+              </Button>
               
-              <div className="text-center w-full max-w-xs">
-                <h2 className="text-xl font-bold truncate">{currentSong.title}</h2>
-                <p className="text-muted-foreground truncate">{currentSong.artist}</p>
-              </div>
+              <Button 
+                variant="default" 
+                size="icon" 
+                className="rounded-full h-12 w-12 shadow-sm"
+                onClick={handlePlayPause}
+              >
+                {isPlaying ? (
+                  <Pause className="h-6 w-6" />
+                ) : (
+                  <Play className="h-6 w-6 ml-1" />
+                )}
+              </Button>
+              
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleNext} 
+                disabled={currentSongIndex === songs.length - 1 && !isRepeatEnabled}
+              >
+                <SkipForward className="h-5 w-5" />
+              </Button>
+              
+              <Toggle
+                aria-label="Toggle repeat"
+                pressed={isRepeatEnabled || isRepeatOne}
+                onPressedChange={handleRepeatClick}
+                variant="ghost"
+                size="sm"
+              >
+                {isRepeatOne ? (
+                  <Repeat1 className="h-4 w-4" />
+                ) : (
+                  <Repeat className="h-4 w-4" />
+                )}
+              </Toggle>
             </div>
             
-            <div className="p-6 bg-background/80 border-t">
-              <AudioControls
-                isPlaying={isPlaying}
-                onPlayPauseClick={handlePlayPause}
-                onPrevClick={handlePrev}
-                onNextClick={handleNext}
-                duration={duration}
-                currentTime={currentTime}
-                onSeek={handleSeek}
-                volume={volume}
-                onVolumeChange={handleVolumeChange}
-                onToggleShuffle={toggleShuffle}
-                onToggleRepeat={toggleRepeat}
-                isShuffleOn={isShuffleOn}
-                isRepeatOn={isRepeatOn}
-                disableSeek={false}
+            <div className="flex items-center gap-2 px-2">
+              <span className="text-xs text-muted-foreground">
+                {formatDuration(progress)}
+              </span>
+              <Slider
+                className="flex-1"
+                value={[progress]}
+                max={duration}
+                step={1}
+                onValueChange={handleProgressChange}
+              />
+              <span className="text-xs text-muted-foreground">
+                {formatDuration(duration)}
+              </span>
+            </div>
+          </div>
+          
+          {/* Volume and Queue */}
+          <div className="flex items-center gap-2 md:gap-4 md:w-1/6 justify-end">
+            <div className="flex items-center gap-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsMuted(!isMuted)}
+              >
+                {isMuted || volume === 0 ? (
+                  <VolumeX className="h-5 w-5" />
+                ) : (
+                  <Volume2 className="h-5 w-5" />
+                )}
+              </Button>
+              <Slider
+                className="w-20 hidden md:flex"
+                value={[isMuted ? 0 : volume]}
+                max={100}
+                step={1}
+                onValueChange={(value) => {
+                  setVolume(value[0]);
+                  if (value[0] > 0) setIsMuted(false);
+                }}
               />
             </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </>
+            
+            <Button variant="ghost" size="icon" onClick={onShowQueue}>
+              <ListMusic className="h-5 w-5" />
+            </Button>
+            
+            <Button variant="ghost" size="icon" onClick={onClose}>
+              <X className="h-5 w-5" />
+            </Button>
+          </div>
+        </div>
+      </Card>
+    </motion.div>
   );
 };

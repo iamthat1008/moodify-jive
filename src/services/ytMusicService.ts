@@ -64,7 +64,6 @@ export const fetchMoodCategories = async (): Promise<string[]> => {
     }
     
     // If we don't have real mood categories yet, return our predefined moods
-    // In a real implementation, we would use: const categories = await ytmusic.getMoodCategories();
     const categories = [
       { title: "Happy", params: "happy" },
       { title: "Sad", params: "sad" },
@@ -94,10 +93,6 @@ export const fetchMoodPlaylists = async (
       return convertToPlaylist(playlistsCache[mood][language][0], mood);
     }
 
-    // In a real implementation, we would use:
-    // const playlists = await ytmusic.getMoodPlaylists(mood);
-    // For now, we'll simulate the API call with sample data
-    
     // Simulated API call based on mood and language
     const playlistTitle = `${mood.charAt(0).toUpperCase() + mood.slice(1)} ${language.charAt(0).toUpperCase() + language.slice(1)} Music`;
     const simulatedResponse = await simulatePlaylistFetch(mood, language);
@@ -126,10 +121,6 @@ export const fetchMoodPlaylists = async (
  */
 export const searchMusic = async (query: string, type: "song" | "artist" | "album" = "song") => {
   try {
-    // In a real implementation, we would use:
-    // const results = await ytmusic.search(query, type);
-    // return results;
-    
     // For now, return simulated search results
     return simulateSearchResults(query, type);
   } catch (error) {
@@ -143,10 +134,6 @@ export const searchMusic = async (query: string, type: "song" | "artist" | "albu
  */
 export const getSongDetails = async (videoId: string): Promise<any> => {
   try {
-    // In a real implementation, we would use:
-    // const song = await ytmusic.getSong(videoId);
-    // return song;
-    
     // For now, return simulated song details
     return {
       videoId,
