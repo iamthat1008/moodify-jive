@@ -1,6 +1,5 @@
-
 import YTMusicAPI from "@codyduong/ytmusicapi";
-import { Playlist, Song } from "@/types/music";
+import { Playlist, Song, MoodPlaylistMap } from "@/types/music";
 import { toast } from "@/components/ui/use-toast";
 
 // Initialize the YTMusic API
@@ -67,6 +66,29 @@ export const fetchMoodPlaylists = async (
       coverImage: "/placeholder.svg",
       songs: []
     };
+  }
+};
+
+export const getAllPlaylists = async (): Promise<MoodPlaylistMap> => {
+  try {
+    console.log("Fetching all playlists");
+    const moods = await fetchMoodCategories();
+    const languages: ("hindi" | "english" | "mixed")[] = ["hindi", "english", "mixed"];
+    
+    const playlists: MoodPlaylistMap = {};
+    
+    for (const mood of moods) {
+      playlists[mood] = {};
+      for (const language of languages) {
+        // Use the existing fetchMoodPlaylists function to populate data
+        playlists[mood][language] = await fetchMoodPlaylists(mood, language);
+      }
+    }
+    
+    return playlists;
+  } catch (error) {
+    console.error("Error fetching all playlists:", error);
+    return {};
   }
 };
 

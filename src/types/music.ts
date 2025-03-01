@@ -15,3 +15,10 @@ export interface Playlist {
   coverImage: string;
   songs: Song[];
 }
+
+// Add the missing MoodPlaylistMap type
+export interface MoodPlaylistMap {
+  [mood: string]: {
+    [language: string]: Playlist;
+  };
+}
