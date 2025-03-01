@@ -29,7 +29,7 @@ const Index = () => {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"hindi" | "english" | "mixed">("english");
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
-  const [availableMoods, setAvailableMoods] = useState<any[]>([]);
+  const [availableMoods, setAvailableMoods] = useState<any[]>(moods); // Initialize with default moods
   const [isLoadingMoods, setIsLoadingMoods] = useState(true);
   const { toast } = useToast();
 
@@ -43,9 +43,11 @@ const Index = () => {
   useEffect(() => {
     const loadMoods = async () => {
       try {
+        setIsLoadingMoods(true);
         // For now, we'll use our predefined moods
         // In the future, we would fetch actual moods from the API
         const moodIds = await fetchMoodCategories();
+        console.log("Loaded moods:", moodIds);
         setAvailableMoods(moods);
       } catch (error) {
         console.error("Error loading moods:", error);
@@ -124,6 +126,7 @@ const Index = () => {
         className="w-full max-w-6xl mx-auto space-y-8"
       >
         <Logo />
+        
         {isLoadingMoods ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />

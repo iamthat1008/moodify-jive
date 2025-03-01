@@ -1,351 +1,315 @@
-
-import { useState, useEffect, useRef } from "react";
-import { motion } from "framer-motion";
-import { Button } from "@/components/ui/button";
-import { Card } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Slider } from "@/components/ui/slider";
+import { Button } from "@/components/ui/button";
 import { Toggle } from "@/components/ui/toggle";
-import { 
-  Play, Pause, SkipBack, SkipForward, Volume2, VolumeX,
-  ListMusic, X, Repeat, Repeat1, Shuffle 
+import {
+  Play,
+  Pause,
+  SkipForward,
+  SkipBack,
+  Repeat,
+  RepeatOne,
+  Shuffle,
+  ListMusic
 } from "lucide-react";
-import { AudioControls } from "./AudioControls";
-import { createYouTubePlayer, formatDuration } from "@/services/youtubePlayerService";
-
-interface Song {
-  id: string;
-  title: string;
-  artist: string;
-  albumArt: string;
-  audioUrl: string;
-  duration: number;
-  isEmbed?: boolean;
-  videoId?: string;
-}
+import { useState, useEffect, useRef, useCallback } from "react";
+import { motion } from "framer-motion";
+import { Song } from "@/types/music";
 
 interface MediaPlayerProps {
   songs: Song[];
-  initialSongIndex: number;
+  initialSongIndex?: number;
   playlistTitle: string;
   onShowQueue: () => void;
   onClose: () => void;
 }
 
-export const MediaPlayer = ({
-  songs,
-  initialSongIndex,
-  playlistTitle,
-  onShowQueue,
-  onClose,
-}: MediaPlayerProps) => {
-  const [currentSongIndex, setCurrentSongIndex] = useState(initialSongIndex);
+export const MediaPlayer = ({ songs, initialSongIndex = 0, playlistTitle, onShowQueue, onClose }: MediaPlayerProps) => {
   const [isPlaying, setIsPlaying] = useState(false);
-  const [volume, setVolume] = useState(80);
-  const [isMuted, setIsMuted] = useState(false);
+  const [currentSongIndex, setCurrentSongIndex] = useState(initialSongIndex);
   const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
+  const [volume, setVolume] = useState(50);
   const [isShuffleEnabled, setIsShuffleEnabled] = useState(false);
+  const [isRepeatEnabled, setIsRepeatEnabled] = useState(false);
   const [isRepeatOne, setIsRepeatOne] = useState(false);
-  
-  const youtubePlayerRef = useRef<YT.Player | null>(null);
-  const playerContainerRef = useRef<HTMLDivElement>(null);
-  const progressInterval = useRef<number | null>(null);
-  
-  const currentSong = songs[currentSongIndex];
-  const isYouTube = !!currentSong?.videoId;
 
-  // Create/update YouTube player when song changes
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+
   useEffect(() => {
-    if (isYouTube && currentSong.videoId) {
-      // Clear any existing interval
-      if (progressInterval.current) {
-        window.clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-
-      // Initialize YouTube player
-      const initPlayer = async () => {
-        if (playerContainerRef.current) {
-          // Remove any existing player
-          while (playerContainerRef.current.firstChild) {
-            playerContainerRef.current.removeChild(playerContainerRef.current.firstChild);
-          }
-
-          // Create a new div for the player
-          const playerElement = document.createElement('div');
-          playerElement.id = 'youtube-player';
-          playerContainerRef.current.appendChild(playerElement);
-
-          // Create YouTube player
-          const player = await createYouTubePlayer(
-            'youtube-player',
-            currentSong.videoId || '',
-            (event) => {
-              // onReady
-              youtubePlayerRef.current = event.target;
-              setDuration(event.target.getDuration());
-              if (isPlaying) event.target.playVideo();
-              
-              // Start progress tracking
-              progressInterval.current = window.setInterval(() => {
-                if (youtubePlayerRef.current) {
-                  const currentTime = youtubePlayerRef.current.getCurrentTime();
-                  const videoDuration = youtubePlayerRef.current.getDuration();
-                  setProgress(currentTime);
-                  setDuration(videoDuration);
-                }
-              }, 1000);
-            },
-            (event) => {
-              // onStateChange
-              if (event.data === window.YT?.PlayerState.ENDED) {
-                handleSongEnd();
-              } else if (event.data === window.YT?.PlayerState.PLAYING) {
-                setIsPlaying(true);
-              } else if (event.data === window.YT?.PlayerState.PAUSED) {
-                setIsPlaying(false);
-              }
-            }
-          );
-        }
-      };
-
-      initPlayer();
+    if (audioRef.current) {
+      audioRef.current.volume = volume / 100;
     }
+  }, [volume]);
 
-    // Cleanup
-    return () => {
-      if (progressInterval.current) {
-        window.clearInterval(progressInterval.current);
-        progressInterval.current = null;
-      }
-    };
-  }, [currentSong, isYouTube]);
-
-  // Handle volume change
   useEffect(() => {
-    if (youtubePlayerRef.current) {
-      if (isMuted) {
-        youtubePlayerRef.current.mute();
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.play();
       } else {
-        youtubePlayerRef.current.unMute();
-        youtubePlayerRef.current.setVolume(volume);
+        audioRef.current.pause();
       }
     }
-  }, [volume, isMuted]);
+  }, [isPlaying, currentSongIndex]);
 
-  // Handle song end
-  const handleSongEnd = () => {
-    if (isRepeatOne) {
-      // Replay the same song
-      if (youtubePlayerRef.current) {
-        youtubePlayerRef.current.seekTo(0, true);
-        youtubePlayerRef.current.playVideo();
-      }
-    } else if (isShuffleEnabled) {
-      // Play random song
-      const randomIndex = Math.floor(Math.random() * songs.length);
-      setCurrentSongIndex(randomIndex);
-    } else if (currentSongIndex < songs.length - 1) {
-      // Play next song
-      setCurrentSongIndex(prev => prev + 1);
-    } else if (isRepeatEnabled) {
-      // Start playlist over
+  useEffect(() => {
+    // Ensure currentSongIndex is within bounds
+    if (currentSongIndex < 0) {
+      setCurrentSongIndex(songs.length - 1);
+    } else if (currentSongIndex >= songs.length) {
       setCurrentSongIndex(0);
-    } else {
-      // Stop playback
-      setIsPlaying(false);
     }
-  };
+  }, [currentSongIndex, songs.length]);
+
+  const currentSong = songs[currentSongIndex];
 
   const handlePlayPause = () => {
-    if (youtubePlayerRef.current) {
-      if (isPlaying) {
-        youtubePlayerRef.current.pauseVideo();
-      } else {
-        youtubePlayerRef.current.playVideo();
-      }
-      setIsPlaying(!isPlaying);
-    }
-  };
-
-  const handlePrevious = () => {
-    if (currentSongIndex > 0) {
-      setCurrentSongIndex(prev => prev - 1);
-    }
+    setIsPlaying(!isPlaying);
   };
 
   const handleNext = () => {
-    if (currentSongIndex < songs.length - 1) {
-      setCurrentSongIndex(prev => prev + 1);
-    } else if (isRepeatEnabled) {
-      setCurrentSongIndex(0);
-    }
+    setCurrentSongIndex((prevIndex) => {
+      if (isShuffleEnabled) {
+        let newIndex = prevIndex;
+        while (newIndex === prevIndex) {
+          newIndex = Math.floor(Math.random() * songs.length);
+        }
+        return newIndex;
+      } else {
+        return (prevIndex + 1) % songs.length;
+      }
+    });
+    setIsPlaying(true);
   };
 
-  const handleProgressChange = (value: number[]) => {
-    const newPosition = value[0];
-    setProgress(newPosition);
-    
-    if (youtubePlayerRef.current) {
-      youtubePlayerRef.current.seekTo(newPosition, true);
-    }
+  const handlePrevious = () => {
+    setCurrentSongIndex((prevIndex) => {
+      if (isShuffleEnabled) {
+        let newIndex = prevIndex;
+        while (newIndex === prevIndex) {
+          newIndex = Math.floor(Math.random() * songs.length);
+        }
+        return newIndex;
+      } else {
+        return (prevIndex - 1 + songs.length) % songs.length;
+      }
+    });
+    setIsPlaying(true);
+  };
+
+  const handleShuffle = () => {
+    setIsShuffleEnabled(!isShuffleEnabled);
   };
 
   const handleRepeatClick = () => {
-    if (!isRepeatEnabled && !isRepeatOne) {
-      setIsRepeatEnabled(true);
-      setIsRepeatOne(false);
-    } else if (isRepeatEnabled && !isRepeatOne) {
+    if (isRepeatEnabled) {
       setIsRepeatEnabled(false);
       setIsRepeatOne(true);
-    } else {
-      setIsRepeatEnabled(false);
+    } else if (isRepeatOne) {
       setIsRepeatOne(false);
+    } else {
+      setIsRepeatEnabled(true);
     }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setProgress(audioRef.current.currentTime);
+    }
+  };
+
+  const handleSeek = (value: number[]) => {
+    if (audioRef.current) {
+      audioRef.current.currentTime = value[0];
+      setProgress(value[0]);
+    }
+  };
+
+  const handleVolumeChange = (value: number[]) => {
+    setVolume(value[0]);
+    if (audioRef.current) {
+      audioRef.current.volume = value[0] / 100;
+    }
+  };
+
+  const handleEnded = () => {
+    if (isRepeatEnabled) {
+      handleNext();
+    } else if (isRepeatOne) {
+      audioRef.current?.play();
+    } else {
+      if (currentSongIndex === songs.length - 1) {
+        setIsPlaying(false);
+      } else {
+        handleNext();
+      }
+    }
+  };
+
+  const formatTime = (time: number) => {
+    const minutes = Math.floor(time / 60);
+    const seconds = Math.floor(time % 60);
+    return `${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
   };
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: 20 }}
-      className="fixed bottom-0 left-0 right-0 z-50 p-4"
+      initial={{ y: "100%" }}
+      animate={{ y: 0 }}
+      exit={{ y: "100%" }}
+      transition={{ type: "spring", damping: 30, stiffness: 300 }}
+      className="fixed inset-x-0 bottom-0 z-50 p-4 pb-6 sm:p-6"
     >
-      <Card className="w-full max-w-4xl mx-auto bg-card/80 backdrop-blur border shadow-xl">
-        <div className="flex flex-col md:flex-row p-4 gap-4">
-          {/* Album Art and Player Container */}
-          <div className="flex md:w-1/3">
-            <div className="w-16 h-16 md:w-24 md:h-24 rounded overflow-hidden flex-shrink-0 mr-4">
-              <img src={currentSong.albumArt} alt={currentSong.title} className="w-full h-full object-cover" />
-            </div>
-            <div className="flex flex-col justify-center flex-grow min-w-0">
-              <h3 className="font-medium text-sm md:text-base truncate">{currentSong.title}</h3>
-              <p className="text-xs md:text-sm text-muted-foreground truncate">{currentSong.artist}</p>
-              <p className="text-xs text-muted-foreground mt-1">{playlistTitle}</p>
-            </div>
-          </div>
+      <div className="relative mx-auto max-w-4xl">
+        <Card className="overflow-hidden border border-border/30 bg-card/80 backdrop-blur-lg shadow-xl">
+          <CardContent className="p-6">
+            <div className="flex flex-col space-y-4">
+              {/* Player Header */}
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold">{currentSong?.title}</h3>
+                  <p className="text-sm text-muted-foreground">{playlistTitle}</p>
+                </div>
+                <Button variant="ghost" size="icon" onClick={onClose}>
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="h-5 w-5"
+                  >
+                    <path d="M18 6 6 18" />
+                    <path d="m6 6 12 12" />
+                  </svg>
+                </Button>
+              </div>
 
-          {/* YouTube Player (hidden) */}
-          <div 
-            ref={playerContainerRef} 
-            className="absolute left-0 top-0 opacity-0 pointer-events-none" 
-            style={{ width: '1px', height: '1px', overflow: 'hidden' }}
-          />
+              {/* Player Content */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+                {/* Album Art */}
+                <div className="col-span-1 flex justify-center">
+                  <img
+                    src={currentSong?.albumArt}
+                    alt={currentSong?.title}
+                    className="aspect-square w-48 rounded-md object-cover shadow-md"
+                  />
+                </div>
 
-          {/* Controls */}
-          <div className="flex-1 flex flex-col justify-center gap-2">
-            <div className="flex items-center justify-center gap-2 md:gap-4">
-              <Toggle
-                aria-label="Toggle shuffle"
-                pressed={isShuffleEnabled}
-                onPressedChange={setIsShuffleEnabled}
-                variant="default"
-                size="sm"
-              >
-                <Shuffle className="h-4 w-4" />
-              </Toggle>
+                {/* Middle section with progress slider */}
+                <div className="col-span-1 md:col-span-2 flex flex-col space-y-3">
+                  {/* Song Info */}
+                  <div className="flex flex-col">
+                    <h4 className="text-xl font-semibold">{currentSong?.title}</h4>
+                    <p className="text-muted-foreground">{currentSong?.artist}</p>
+                  </div>
 
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handlePrevious} 
-                disabled={currentSongIndex === 0}
-              >
-                <SkipBack className="h-5 w-5" />
-              </Button>
-              
-              <Button 
-                variant="default" 
-                size="icon" 
-                className="rounded-full h-12 w-12 shadow-sm"
-                onClick={handlePlayPause}
-              >
-                {isPlaying ? (
-                  <Pause className="h-6 w-6" />
-                ) : (
-                  <Play className="h-6 w-6 ml-1" />
-                )}
-              </Button>
-              
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={handleNext} 
-                disabled={currentSongIndex === songs.length - 1 && !isRepeatEnabled}
-              >
-                <SkipForward className="h-5 w-5" />
-              </Button>
-              
-              <Toggle
-                aria-label="Toggle repeat"
-                pressed={isRepeatEnabled || isRepeatOne}
-                onPressedChange={handleRepeatClick}
-                variant="default"
-                size="sm"
-              >
-                {isRepeatOne ? (
-                  <Repeat1 className="h-4 w-4" />
-                ) : (
-                  <Repeat className="h-4 w-4" />
-                )}
-              </Toggle>
+                  {/* Progress Bar */}
+                  <div className="flex items-center space-x-3">
+                    <span className="text-sm text-muted-foreground">
+                      {formatTime(progress)}
+                    </span>
+                    <Slider
+                      value={[progress]}
+                      max={audioRef.current?.duration || 100}
+                      onValueChange={handleSeek}
+                      className="flex-1"
+                    />
+                    <span className="text-sm text-muted-foreground">
+                      {formatTime(audioRef.current?.duration || 0)}
+                    </span>
+                  </div>
+
+                  {/* Playback Controls */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-0.5">
+                      <Toggle 
+                        aria-label="Toggle shuffle"
+                        pressed={isShuffleEnabled}
+                        onPressedChange={setIsShuffleEnabled}
+                        variant="outline"
+                        size="sm"
+                      >
+                        <Shuffle className="h-4 w-4" />
+                      </Toggle>
+                    </div>
+
+                    <div className="flex items-center justify-center gap-2">
+                      <Button variant="ghost" size="icon" onClick={handlePrevious}>
+                        <SkipBack className="h-6 w-6" />
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={handlePlayPause}>
+                        {isPlaying ? (
+                          <Pause className="h-8 w-8" />
+                        ) : (
+                          <Play className="h-8 w-8" />
+                        )}
+                      </Button>
+                      <Button variant="ghost" size="icon" onClick={handleNext}>
+                        <SkipForward className="h-6 w-6" />
+                      </Button>
+                    </div>
+
+                    <div className="flex items-center gap-0.5">
+                      <Toggle 
+                        aria-label="Toggle repeat"
+                        pressed={isRepeatEnabled || isRepeatOne}
+                        onPressedChange={handleRepeatClick}
+                        variant="outline"
+                        size="sm"
+                      >
+                        {isRepeatOne ? (
+                          <RepeatOne className="h-4 w-4" />
+                        ) : (
+                          <Repeat className="h-4 w-4" />
+                        )}
+                      </Toggle>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Volume Controls */}
+              <div className="flex items-center space-x-4">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="24"
+                  height="24"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="h-5 w-5 shrink-0 text-muted-foreground"
+                >
+                  <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
+                </svg>
+                <Slider
+                  defaultValue={[volume]}
+                  max={100}
+                  step={1}
+                  onValueChange={handleVolumeChange}
+                  className="flex-1"
+                />
+                <Button variant="outline" size="sm" onClick={onShowQueue}>
+                  <ListMusic className="mr-2 h-4 w-4" />
+                  Queue
+                </Button>
+              </div>
             </div>
-            
-            <div className="flex items-center gap-2 px-2">
-              <span className="text-xs text-muted-foreground">
-                {formatDuration(progress)}
-              </span>
-              <Slider
-                className="flex-1"
-                value={[progress]}
-                max={duration}
-                step={1}
-                onValueChange={handleProgressChange}
-              />
-              <span className="text-xs text-muted-foreground">
-                {formatDuration(duration)}
-              </span>
-            </div>
-          </div>
-          
-          {/* Volume and Queue */}
-          <div className="flex items-center gap-2 md:gap-4 md:w-1/6 justify-end">
-            <div className="flex items-center gap-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => setIsMuted(!isMuted)}
-              >
-                {isMuted || volume === 0 ? (
-                  <VolumeX className="h-5 w-5" />
-                ) : (
-                  <Volume2 className="h-5 w-5" />
-                )}
-              </Button>
-              <Slider
-                className="w-20 hidden md:flex"
-                value={[isMuted ? 0 : volume]}
-                max={100}
-                step={1}
-                onValueChange={(value) => {
-                  setVolume(value[0]);
-                  if (value[0] > 0) setIsMuted(false);
-                }}
-              />
-            </div>
-            
-            <Button variant="ghost" size="icon" onClick={onShowQueue}>
-              <ListMusic className="h-5 w-5" />
-            </Button>
-            
-            <Button variant="ghost" size="icon" onClick={onClose}>
-              <X className="h-5 w-5" />
-            </Button>
-          </div>
-        </div>
-      </Card>
+          </CardContent>
+        </Card>
+      </div>
+      <audio
+        src={currentSong?.url}
+        ref={audioRef}
+        onTimeUpdate={handleTimeUpdate}
+        onEnded={handleEnded}
+      />
     </motion.div>
   );
 };
