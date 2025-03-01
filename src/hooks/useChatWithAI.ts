@@ -3,7 +3,7 @@ import { useState } from "react";
 import { type Message } from "@/components/MoodifyAssistant/ChatInterface";
 
 const GEMINI_API_KEY = "AIzaSyB3rnuoW6u7AW91dOFhYCArOICpd7Qa5n4";
-const API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent";
+const API_URL = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
 
 export const useChatWithAI = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -60,6 +60,9 @@ Previous context from chat: ${JSON.stringify(context.slice(-3))}`;
 
       const data = await response.json();
       return data.candidates[0].content.parts[0].text;
+    } catch (error) {
+      console.error("Error in AI response:", error);
+      return "I'm having trouble connecting right now. Please try again later!";
     } finally {
       setIsLoading(false);
     }
