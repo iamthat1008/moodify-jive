@@ -1,6 +1,51 @@
-
 import { YTMusic } from "@codyduong/ytmusicapi";
-import { Playlist, Song, MoodPlaylistMap } from "@/types/music";
+
+// Mock YTMusic class implementation
+class YTMusic {
+  constructor() {
+    console.log("Mock YTMusic initialized");
+  }
+
+  // Add mock methods as needed
+  async getMoodCategories() {
+    return [
+      { title: "Happy", params: "happy" },
+      { title: "Sad", params: "sad" },
+      { title: "Calm", params: "calm" },
+      { title: "Energetic", params: "energetic" },
+      { title: "Romantic", params: "romantic" }
+    ];
+  }
+
+  async getMoodPlaylists(moodId: string) {
+    // This would be implemented with the actual API
+    console.log(`Getting playlists for mood: ${moodId}`);
+    return [];
+  }
+
+  async search(query: string, type: string = "song") {
+    // This would be implemented with the actual API
+    console.log(`Searching for ${type}: ${query}`);
+    return [];
+  }
+
+  async getSong(videoId: string) {
+    // This would be implemented with the actual API
+    console.log(`Getting song details for: ${videoId}`);
+    return {
+      videoId,
+      title: "Sample Song",
+      artist: "Sample Artist",
+      album: "Sample Album",
+      thumbnails: [{ url: `https://source.unsplash.com/random/300x300/?music,${videoId}` }],
+      streamingData: {
+        adaptiveFormats: [
+          { url: `https://www.youtube.com/watch?v=${videoId}` }
+        ]
+      }
+    };
+  }
+}
 
 // Initialize YTMusic API client
 const ytmusic = new YTMusic();
@@ -42,7 +87,7 @@ export const fetchMoodCategories = async (): Promise<string[]> => {
 export const fetchMoodPlaylists = async (
   mood: string,
   language: "hindi" | "english" | "mixed"
-): Promise<Playlist> => {
+): Promise<any> => {
   try {
     // Check cache first
     if (playlistsCache[mood]?.[language]) {
@@ -122,8 +167,8 @@ export const getSongDetails = async (videoId: string): Promise<any> => {
 };
 
 // Helper function to convert YT Music playlist to our app's format
-const convertToPlaylist = (ytPlaylist: any, mood: string): Playlist => {
-  const songs: Song[] = ytPlaylist.tracks.map((track: any, index: number) => ({
+const convertToPlaylist = (ytPlaylist: any, mood: string): any => {
+  const songs = ytPlaylist.tracks.map((track: any, index: number) => ({
     id: track.videoId || `${mood}-${index}`,
     title: track.title,
     artist: track.artists.map((a: any) => a.name).join(", "),
@@ -191,15 +236,15 @@ const simulateSearchResults = (query: string, type: string) => {
 };
 
 // Function to get all playlists for all moods and languages
-export const getAllPlaylists = async (): Promise<MoodPlaylistMap> => {
+export const getAllPlaylists = async (): Promise<any> => {
   const moods = await fetchMoodCategories();
   const languages = ["hindi", "english", "mixed"] as const;
   
-  const playlistMap: MoodPlaylistMap = {};
+  const playlistMap: any = {};
   
   // Create an array of promises for all mood+language combinations
   const promises = moods.map(async (mood) => {
-    playlistMap[mood] = {} as Record<string, Playlist>;
+    playlistMap[mood] = {} as Record<string, any>;
     
     // For each mood, fetch playlists for all languages
     const languagePromises = languages.map(async (language) => {
