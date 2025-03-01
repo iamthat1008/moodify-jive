@@ -1,14 +1,17 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { playlists } from "@/data/playlists";
+import { useState, useEffect } from "react";
+import { playlists, loadPlaylists } from "@/data/playlists";
 import { MediaPlayer } from "@/components/MusicPlayer/MediaPlayer";
 import { MusicQueue } from "@/components/MusicPlayer/MusicQueue";
-import { PlayCircle, ListMusic, Grid, List } from "lucide-react";
+import { PlayCircle, ListMusic, Grid, List, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { useToast } from "@/components/ui/use-toast";
+import { fetchMoodPlaylists } from "@/services/ytMusicService";
+import { Playlist } from "@/types/music";
 
 interface PlaylistViewerProps {
   mood: string;
@@ -20,8 +23,48 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [viewType, setViewType] = useState<"list" | "grid">("list");
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const { toast } = useToast();
   
-  const playlist = playlists[mood as keyof typeof playlists]?.[language];
+  useEffect(() => {
+    const loadPlaylist = async () => {
+      setIsLoading(true);
+      try {
+        // Try to get from cache first
+        let currentPlaylist = playlists[mood]?.[language];
+        
+        // If not in cache, fetch it
+        if (!currentPlaylist) {
+          currentPlaylist = await fetchMoodPlaylists(mood, language);
+        }
+        
+        setPlaylist(currentPlaylist);
+      } catch (error) {
+        console.error("Error loading playlist:", error);
+        toast({
+          title: "Error loading playlist",
+          description: "There was an issue loading the playlist. Please try again.",
+          variant: "destructive",
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    
+    loadPlaylist();
+  }, [mood, language, toast]);
+
+  if (isLoading) {
+    return (
+      <Card className="w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden rounded-xl bg-card flex items-center justify-center">
+        <div className="flex flex-col items-center space-y-4">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <p className="text-muted-foreground">Loading playlist...</p>
+        </div>
+      </Card>
+    );
+  }
   
   if (!playlist) {
     return (
@@ -36,7 +79,7 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
       <Card className="w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden rounded-xl bg-card p-6 flex flex-col relative">
         <div className="absolute inset-0 z-0">
           <img 
-            src={playlist.songs[0]?.albumArt || ""} 
+            src={playlist.songs[0]?.albumArt || playlist.coverImage} 
             alt={playlist.name}
             className="w-full h-full object-cover opacity-25 blur-2xl"
           />
@@ -49,6 +92,7 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
               <Badge variant="outline" className="mb-2">{mood}</Badge>
               <h2 className="text-2xl font-bold">{playlist.name}</h2>
               <p className="text-muted-foreground">{playlist.description}</p>
+              <Badge variant="secondary" className="mt-2">YouTube Music</Badge>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -163,16 +207,17 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
       </Card>
 
       <AnimatePresence>
-        {isPlayerOpen && (
+        {isPlayerOpen && playlist && (
           <MediaPlayer 
             songs={playlist.songs}
             initialSongIndex={currentSongIndex}
             playlistTitle={playlist.name}
             onShowQueue={() => setIsQueueOpen(true)}
+            onClose={() => setIsPlayerOpen(false)}
           />
         )}
 
-        {isQueueOpen && (
+        {isQueueOpen && playlist && (
           <MusicQueue 
             songs={playlist.songs}
             currentSongIndex={currentSongIndex}

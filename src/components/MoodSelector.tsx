@@ -1,67 +1,50 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { useState } from "react";
+import { cn } from "@/lib/utils";
+import { Loader2 } from "lucide-react";
 
-import { motion } from "framer-motion";
-import { LucideIcon } from "lucide-react";
+export const MoodSelector = ({ moods, onSelect }: { moods: any[], onSelect: (mood: string) => void }) => {
+  const [selectedMood, setSelectedMood] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-interface MoodSelectorProps {
-  moods: {
-    id: string;
-    name: string;
-    icon: LucideIcon;
-    color: string;
-  }[];
-  onSelect: (moodId: string) => void;
-}
-
-export const MoodSelector = ({ moods, onSelect }: MoodSelectorProps) => {
-  const container = {
-    hidden: { opacity: 0 },
-    show: {
-      opacity: 1,
-      transition: {
-        staggerChildren: 0.1
-      }
-    }
-  };
-
-  const item = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0 }
+  const handleSelect = (mood: string) => {
+    setSelectedMood(mood);
+    setIsLoading(true);
+    
+    // Simulate loading time when selecting a mood
+    setTimeout(() => {
+      setIsLoading(false);
+      onSelect(mood);
+    }, 800);
   };
 
   return (
-    <motion.div
-      variants={container}
-      initial="hidden"
-      animate="show"
-      className="grid grid-cols-2 md:grid-cols-3 gap-4"
-    >
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
       {moods.map((mood) => (
-        <motion.button
+        <Card
           key={mood.id}
-          variants={item}
-          whileHover={{ scale: 1.05 }}
-          whileTap={{ scale: 0.95 }}
-          onClick={() => onSelect(mood.id)}
-          className={`${
-            mood.color
-          } relative overflow-hidden rounded-xl p-6 text-white transition-colors duration-200 group`}
+          className={cn(
+            "cursor-pointer hover:scale-105 transition-transform",
+            selectedMood === mood.id ? "ring-2 ring-primary" : "ring-1 ring-border"
+          )}
+          onClick={() => handleSelect(mood.id)}
+          disabled={isLoading}
         >
-          <motion.div
-            className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors"
-            initial={false}
-            animate={{ opacity: 1 }}
-          />
-          <div className="relative flex flex-col items-center space-y-4">
-            <motion.div
-              whileHover={{ rotate: 5, scale: 1.1 }}
-              transition={{ type: "spring", stiffness: 400, damping: 10 }}
-            >
-              <mood.icon size={32} />
-            </motion.div>
-            <span className="font-medium text-lg">{mood.name}</span>
-          </div>
-        </motion.button>
+          <CardContent className="flex flex-col items-center justify-center space-y-3 p-3">
+            {isLoading && selectedMood === mood.id ? (
+              <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+            ) : (
+              <img
+                src={mood.image}
+                alt={mood.name}
+                className="h-16 w-16 rounded-full object-cover shadow-md"
+              />
+            )}
+            <h3 className="text-sm font-semibold text-center">{mood.name}</h3>
+            <p className="text-xs text-muted-foreground text-center">{mood.description}</p>
+          </CardContent>
+        </Card>
       ))}
-    </motion.div>
+    </div>
   );
-};
+}

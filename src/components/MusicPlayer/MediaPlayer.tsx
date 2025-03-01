@@ -1,8 +1,9 @@
+
 import { useState, useRef, useEffect } from "react";
 import { Song } from "@/types/music";
 import { AudioControls } from "./AudioControls";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronDown, ListMusic, Play, Pause } from "lucide-react";
+import { ChevronDown, ListMusic, Play, Pause, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -34,89 +35,161 @@ export const MediaPlayer = ({
   const [isMinimized, setIsMinimized] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const iframeRef = useRef<HTMLIFrameElement | null>(null);
+  const ytPlayerRef = useRef<any>(null);
   const { toast } = useToast();
 
   const currentSong = songs[currentSongIndex];
   
-  const isEmbedSong = currentSong?.isEmbed || currentSong?.audioUrl?.includes('/preview');
+  // All YouTube Music content is treated as embedded
+  const isEmbedSong = true;
 
+  // Initialize YouTube player
   useEffect(() => {
-    if (!isEmbedSong && audioRef.current) {
-      const audio = audioRef.current;
+    // Load YouTube IFrame API
+    if (!window.YT && !document.getElementById('youtube-api')) {
+      const tag = document.createElement('script');
+      tag.id = 'youtube-api';
+      tag.src = 'https://www.youtube.com/iframe_api';
+      const firstScriptTag = document.getElementsByTagName('script')[0];
+      firstScriptTag.parentNode?.insertBefore(tag, firstScriptTag);
+    }
+
+    // When YouTube IFrame API is ready
+    const onYouTubeIframeAPIReady = () => {
+      if (!currentSong?.videoId) return;
       
-      const setAudioData = () => {
-        setDuration(audio.duration);
-      };
+      if (ytPlayerRef.current) {
+        ytPlayerRef.current.destroy();
+      }
       
-      const setAudioTime = () => {
-        setCurrentTime(audio.currentTime);
-      };
+      // Extract video ID from URL if it's a full URL
+      let videoId = currentSong.videoId;
+      if (!videoId && currentSong.audioUrl) {
+        const match = currentSong.audioUrl.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+        if (match) {
+          videoId = match[1];
+        }
+      }
       
-      const handleEnded = () => {
+      if (!videoId) {
+        console.error("No video ID found for song:", currentSong);
+        return;
+      }
+      
+      // Create YouTube player
+      ytPlayerRef.current = new window.YT.Player('youtube-player', {
+        videoId: videoId,
+        playerVars: {
+          autoplay: isPlaying ? 1 : 0,
+          controls: 0,
+          disablekb: 1,
+          enablejsapi: 1,
+          iv_load_policy: 3,
+          modestbranding: 1,
+          rel: 0,
+          showinfo: 0
+        },
+        events: {
+          onReady: onPlayerReady,
+          onStateChange: onPlayerStateChange,
+          onError: onPlayerError
+        }
+      });
+    };
+
+    // Handle player ready event
+    const onPlayerReady = (event: any) => {
+      event.target.setVolume(volume * 100);
+      if (isPlaying) {
+        event.target.playVideo();
+      }
+      setDuration(event.target.getDuration());
+    };
+
+    // Handle player state changes
+    const onPlayerStateChange = (event: any) => {
+      if (event.data === window.YT.PlayerState.ENDED) {
         if (isRepeatOn) {
-          audio.currentTime = 0;
-          audio.play();
+          event.target.seekTo(0);
+          event.target.playVideo();
         } else {
           handleNext();
         }
-      };
-
-      audio.addEventListener('loadeddata', setAudioData);
-      audio.addEventListener('timeupdate', setAudioTime);
-      audio.addEventListener('ended', handleEnded);
-      
-      audio.volume = volume;
-      
-      if (isPlaying) {
-        audio.play().catch(error => {
-          console.error("Error playing audio:", error);
-          toast({
-            title: "Playback Error",
-            description: "There was an error playing this track. Please try again.",
-            variant: "destructive"
-          });
-          setIsPlaying(false);
-        });
       }
       
-      return () => {
-        audio.removeEventListener('loadeddata', setAudioData);
-        audio.removeEventListener('timeupdate', setAudioTime);
-        audio.removeEventListener('ended', handleEnded);
-      };
-    }
-  }, [currentSongIndex, isPlaying, volume, isRepeatOn, toast, isEmbedSong]);
+      if (event.data === window.YT.PlayerState.PLAYING) {
+        setIsPlaying(true);
+        // Start time updater
+        startTimeUpdater();
+      } else if (event.data === window.YT.PlayerState.PAUSED) {
+        setIsPlaying(false);
+        // Stop time updater
+        stopTimeUpdater();
+      }
+    };
 
-  const handlePlayPause = () => {
-    if (isEmbedSong) {
-      setIsPlaying(!isPlaying);
+    // Handle player errors
+    const onPlayerError = (event: any) => {
+      console.error("YouTube Player Error:", event.data);
       toast({
-        title: isPlaying ? "Paused" : "Playing",
-        description: "Embedded players may need manual control in the iframe",
+        title: "Playback Error",
+        description: "There was an error playing this track. Please try another song.",
+        variant: "destructive"
       });
-      return;
+    };
+
+    // Set up YouTube API ready callback
+    window.onYouTubeIframeAPIReady = onYouTubeIframeAPIReady;
+
+    // If YouTube API is already loaded, initialize player directly
+    if (window.YT && window.YT.Player) {
+      onYouTubeIframeAPIReady();
     }
-    
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-      } else {
-        audioRef.current.play().catch(error => {
-          console.error("Error playing audio:", error);
-          toast({
-            title: "Playback Error",
-            description: "There was an error playing this track. Please try again.",
-            variant: "destructive"
-          });
-        });
+
+    return () => {
+      // Clean up YouTube player
+      if (ytPlayerRef.current) {
+        ytPlayerRef.current.destroy();
       }
-      setIsPlaying(!isPlaying);
+      
+      // Clean up time updater
+      stopTimeUpdater();
+    };
+  }, [currentSong, isPlaying, volume, isRepeatOn, toast]);
+
+  // Time updater for YouTube player
+  const timeUpdaterRef = useRef<number | null>(null);
+  
+  const startTimeUpdater = () => {
+    stopTimeUpdater();
+    timeUpdaterRef.current = window.setInterval(() => {
+      if (ytPlayerRef.current && typeof ytPlayerRef.current.getCurrentTime === 'function') {
+        setCurrentTime(ytPlayerRef.current.getCurrentTime());
+      }
+    }, 1000);
+  };
+  
+  const stopTimeUpdater = () => {
+    if (timeUpdaterRef.current) {
+      window.clearInterval(timeUpdaterRef.current);
+      timeUpdaterRef.current = null;
     }
   };
 
+  const handlePlayPause = () => {
+    if (ytPlayerRef.current) {
+      if (isPlaying) {
+        ytPlayerRef.current.pauseVideo();
+      } else {
+        ytPlayerRef.current.playVideo();
+      }
+    }
+    // setIsPlaying is handled by onPlayerStateChange
+  };
+
   const handlePrev = () => {
-    if (!isEmbedSong && audioRef.current && currentTime > 3) {
-      audioRef.current.currentTime = 0;
+    if (ytPlayerRef.current && currentTime > 3) {
+      ytPlayerRef.current.seekTo(0);
     } else {
       const newIndex = currentSongIndex === 0 ? songs.length - 1 : currentSongIndex - 1;
       setCurrentSongIndex(newIndex);
@@ -137,20 +210,20 @@ export const MediaPlayer = ({
   };
 
   const handleSeek = (time: number) => {
-    if (!isEmbedSong && audioRef.current) {
-      audioRef.current.currentTime = time;
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.seekTo(time);
       setCurrentTime(time);
     } else {
       toast({
         title: "Seek Not Available",
-        description: "Seeking is not available for embedded content",
+        description: "Seeking is not available for this content",
       });
     }
   };
 
   const handleVolumeChange = (newVolume: number) => {
-    if (!isEmbedSong && audioRef.current) {
-      audioRef.current.volume = newVolume;
+    if (ytPlayerRef.current) {
+      ytPlayerRef.current.setVolume(newVolume * 100);
     }
     setVolume(newVolume);
   };
@@ -177,14 +250,6 @@ export const MediaPlayer = ({
 
   return (
     <>
-      {!isEmbedSong && (
-        <audio 
-          ref={audioRef} 
-          src={currentSong.audioUrl}
-          preload="metadata" 
-        />
-      )}
-
       <AnimatePresence>
         {isMinimized ? (
           <motion.div
@@ -242,9 +307,12 @@ export const MediaPlayer = ({
             )}
           >
             <div className="flex justify-between items-center p-4 border-b">
-              <Badge variant="outline" className="font-normal">
-                {playlistTitle}
-              </Badge>
+              <div className="flex items-center space-x-2">
+                <Badge variant="outline" className="font-normal">
+                  {playlistTitle}
+                </Badge>
+                <Badge variant="secondary">YouTube Music</Badge>
+              </div>
               <div className="flex space-x-1">
                 {onShowQueue && (
                   <Button 
@@ -264,6 +332,16 @@ export const MediaPlayer = ({
                 >
                   <ChevronDown size={18} />
                 </Button>
+                {onClose && (
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={onClose}
+                    className="h-8 w-8"
+                  >
+                    <X size={18} />
+                  </Button>
+                )}
               </div>
             </div>
             
@@ -279,30 +357,20 @@ export const MediaPlayer = ({
                   alt={currentSong.title} 
                   className="w-full h-full object-cover"
                 />
-                {isEmbedSong && (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <iframe
-                      ref={iframeRef}
-                      src={currentSong.audioUrl}
-                      width="100%"
-                      height="100%"
-                      allow="autoplay"
-                      className="absolute opacity-0"
-                      style={{ pointerEvents: isPlaying ? 'auto' : 'none' }}
-                    />
-                    {!isPlaying && (
-                      <div className="absolute inset-0 flex items-center justify-center bg-black/50">
-                        <Button
-                          onClick={handlePlayPause}
-                          size="icon"
-                          className="h-16 w-16 rounded-full"
-                        >
-                          <Play size={32} />
-                        </Button>
-                      </div>
-                    )}
-                  </div>
-                )}
+                <div className="absolute inset-0">
+                  <div id="youtube-player" className="absolute top-0 left-0 w-full h-full opacity-0"></div>
+                  {!isPlaying && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/50 z-10">
+                      <Button
+                        onClick={handlePlayPause}
+                        size="icon"
+                        className="h-16 w-16 rounded-full"
+                      >
+                        <Play size={32} />
+                      </Button>
+                    </div>
+                  )}
+                </div>
               </motion.div>
               
               <div className="text-center w-full max-w-xs">
@@ -326,7 +394,7 @@ export const MediaPlayer = ({
                 onToggleRepeat={toggleRepeat}
                 isShuffleOn={isShuffleOn}
                 isRepeatOn={isRepeatOn}
-                disableSeek={isEmbedSong}
+                disableSeek={false}
               />
             </div>
           </motion.div>

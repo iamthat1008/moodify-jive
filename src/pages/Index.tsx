@@ -13,6 +13,8 @@ import { ChatBubble } from "@/components/ChatBubble";
 import { Logo } from "@/components/Logo";
 import { Footer } from "@/components/Footer";
 import { moods } from "@/config/moodTypes";
+import { fetchMoodCategories } from "@/services/ytMusicService";
+import { Loader2 } from "lucide-react";
 
 interface UserData {
   name: string;
@@ -27,6 +29,8 @@ const Index = () => {
   const [selectedMood, setSelectedMood] = useState<string | null>(null);
   const [selectedLanguage, setSelectedLanguage] = useState<"hindi" | "english" | "mixed">("english");
   const [showLanguageSelector, setShowLanguageSelector] = useState(false);
+  const [availableMoods, setAvailableMoods] = useState<any[]>([]);
+  const [isLoadingMoods, setIsLoadingMoods] = useState(true);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -35,6 +39,31 @@ const Index = () => {
       setUserData(JSON.parse(savedUserData));
     }
   }, []);
+
+  useEffect(() => {
+    const loadMoods = async () => {
+      try {
+        // For now, we'll use our predefined moods
+        // In the future, we would fetch actual moods from the API
+        const moodIds = await fetchMoodCategories();
+        setAvailableMoods(moods);
+      } catch (error) {
+        console.error("Error loading moods:", error);
+        toast({
+          title: "Error loading moods",
+          description: "There was an issue fetching moods. Using default moods instead.",
+          variant: "destructive",
+        });
+        setAvailableMoods(moods);
+      } finally {
+        setIsLoadingMoods(false);
+      }
+    };
+    
+    if (!showIntro && !showOnboarding) {
+      loadMoods();
+    }
+  }, [showIntro, showOnboarding, toast]);
 
   const handleOnboardingComplete = (data: UserData) => {
     setUserData(data);
@@ -95,10 +124,15 @@ const Index = () => {
         className="w-full max-w-6xl mx-auto space-y-8"
       >
         <Logo />
-        {!selectedMood ? (
+        {isLoadingMoods ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+            <p className="text-muted-foreground">Loading moods from YouTube Music...</p>
+          </div>
+        ) : !selectedMood ? (
           <>
             {userData && <PersonalizedWelcome name={userData.name} />}
-            <MoodSelector moods={moods} onSelect={handleMoodSelect} />
+            <MoodSelector moods={availableMoods} onSelect={handleMoodSelect} />
           </>
         ) : showLanguageSelector ? (
           <motion.div
