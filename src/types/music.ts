@@ -5,7 +5,8 @@ export interface Song {
   artist: string;
   albumArt: string;
   audioUrl: string;
-  duration: number;
+  duration: number; // in seconds
+  isEmbed?: boolean; // Optional flag to indicate if the song uses an embed player
 }
 
 export interface Playlist {
@@ -16,9 +17,8 @@ export interface Playlist {
   songs: Song[];
 }
 
-// Add the missing MoodPlaylistMap type
-export interface MoodPlaylistMap {
+export type MoodPlaylistMap = {
   [mood: string]: {
     [language: string]: Playlist;
   };
-}
+};

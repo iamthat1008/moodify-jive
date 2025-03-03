@@ -194,3 +194,4 @@ export const OnboardingFlow = ({ onComplete }: OnboardingFlowProps) => {
     </AnimatePresence>
   );
 };
+
