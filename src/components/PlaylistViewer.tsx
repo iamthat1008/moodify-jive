@@ -1,14 +1,20 @@
 
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { playlists } from "@/data/playlists";
 import { MediaPlayer } from "@/components/MusicPlayer/MediaPlayer";
 import { MusicQueue } from "@/components/MusicPlayer/MusicQueue";
-import { PlayCircle, ListMusic, Grid, List } from "lucide-react";
+import { PlayCircle, ListMusic, Grid, List, RefreshCcw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { getPlaylistById } from "@/services/ytMusicService";
+import { getYouTubeMusicPlaylistId } from "@/config/youtubeMusic";
+import { Playlist } from "@/types/music";
+import { useToast } from "@/components/ui/use-toast";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 interface PlaylistViewerProps {
   mood: string;
@@ -20,13 +26,78 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
   const [isQueueOpen, setIsQueueOpen] = useState(false);
   const [currentSongIndex, setCurrentSongIndex] = useState(0);
   const [viewType, setViewType] = useState<"list" | "grid">("list");
+  const [useYouTubeMusic, setUseYouTubeMusic] = useState(false);
+  const [playlist, setPlaylist] = useState<Playlist | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const { toast } = useToast();
   
-  const playlist = playlists[mood as keyof typeof playlists]?.[language];
+  // Get the local playlist
+  const localPlaylist = playlists[mood as keyof typeof playlists]?.[language];
+  
+  // Fetch YouTube Music playlist
+  const fetchYouTubeMusicPlaylist = async () => {
+    const playlistId = getYouTubeMusicPlaylistId(mood, language);
+    if (!playlistId) {
+      toast({
+        title: "Playlist not available",
+        description: `No YouTube Music playlist found for ${mood} mood in ${language} language.`,
+        variant: "destructive"
+      });
+      return null;
+    }
+    
+    setIsLoading(true);
+    try {
+      const ytPlaylist = await getPlaylistById(playlistId);
+      if (ytPlaylist) {
+        ytPlaylist.source = "youtube";
+        return ytPlaylist;
+      }
+      return null;
+    } catch (error) {
+      console.error("Error fetching YouTube Music playlist:", error);
+      toast({
+        title: "Error",
+        description: "Failed to fetch YouTube Music playlist. Using local playlist instead.",
+        variant: "destructive"
+      });
+      return null;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  // Load the appropriate playlist based on the source selection
+  useEffect(() => {
+    const loadPlaylist = async () => {
+      if (useYouTubeMusic) {
+        const ytPlaylist = await fetchYouTubeMusicPlaylist();
+        if (ytPlaylist) {
+          setPlaylist(ytPlaylist);
+        } else {
+          // Fall back to local playlist if YouTube Music playlist isn't available
+          setPlaylist(localPlaylist);
+          setUseYouTubeMusic(false);
+        }
+      } else {
+        setPlaylist(localPlaylist);
+      }
+    };
+    
+    loadPlaylist();
+  }, [mood, language, useYouTubeMusic]);
   
   if (!playlist) {
     return (
       <Card className="w-full aspect-[4/3] md:aspect-[16/9] overflow-hidden rounded-xl bg-card flex items-center justify-center">
-        <p className="text-muted-foreground">Playlist not found</p>
+        {isLoading ? (
+          <div className="flex flex-col items-center space-y-4">
+            <RefreshCcw className="animate-spin h-8 w-8 text-primary" />
+            <p className="text-muted-foreground">Loading playlist...</p>
+          </div>
+        ) : (
+          <p className="text-muted-foreground">Playlist not found</p>
+        )}
       </Card>
     );
   }
@@ -49,6 +120,17 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
               <Badge variant="outline" className="mb-2">{mood}</Badge>
               <h2 className="text-2xl font-bold">{playlist.name}</h2>
               <p className="text-muted-foreground">{playlist.description}</p>
+              
+              <div className="flex items-center mt-2 space-x-2">
+                <Switch
+                  id="use-youtube"
+                  checked={useYouTubeMusic}
+                  onCheckedChange={setUseYouTubeMusic}
+                />
+                <Label htmlFor="use-youtube">
+                  {useYouTubeMusic ? "Using YouTube Music" : "Using Local Playlist"}
+                </Label>
+              </div>
             </div>
 
             <div className="flex items-center space-x-2">
@@ -163,7 +245,7 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
       </Card>
 
       <AnimatePresence>
-        {isPlayerOpen && (
+        {isPlayerOpen && playlist && (
           <MediaPlayer 
             songs={playlist.songs}
             initialSongIndex={currentSongIndex}
@@ -172,7 +254,7 @@ export const PlaylistViewer = ({ mood, language }: PlaylistViewerProps) => {
           />
         )}
 
-        {isQueueOpen && (
+        {isQueueOpen && playlist && (
           <MusicQueue 
             songs={playlist.songs}
             currentSongIndex={currentSongIndex}

@@ -1,4 +1,3 @@
-
 export interface Song {
   id: string;
   title: string;
@@ -15,10 +14,18 @@ export interface Playlist {
   description: string;
   coverImage: string;
   songs: Song[];
+  source?: "local" | "youtube"; // To track the source of the playlist
 }
 
 export type MoodPlaylistMap = {
   [mood: string]: {
     [language: string]: Playlist;
+  };
+};
+
+// This type will help us keep track of the YouTube Music playlist IDs for each mood
+export type YoutubeMusicPlaylists = {
+  [mood: string]: {
+    [language: string]: string; // YouTube Music Playlist ID
   };
 };
